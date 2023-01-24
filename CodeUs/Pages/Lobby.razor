@@ -1,0 +1,182 @@
+﻿@page "/lobby"
+@using CodeUs.Hubs;
+@using CodeUs.Shared.Models;
+@using Microsoft.AspNetCore.SignalR.Client;
+@inject NavigationManager navigationManager
+@inject Shared.StateContainers.PlayInfoContainer playInfoContainer
+@inject Shared.StateContainers.IRoomsService roomsService
+@inject Shared.StateContainers.IWordsService wordsService
+
+<h1>current user: @_currentUserName</h1>
+<h1>room code: @_currentRoomCode</h1>
+
+<div class="players-and-settings-container">
+    <div class="player-list">
+        @if(_players != null)
+        {
+            <ul class="no-bullets">
+                @foreach (var player in _players)
+                {
+                    string className = "";
+                    if (player.IsReady)
+                    {
+                        className = "ready";
+                    }
+                    else
+                    {
+                        className = "not-ready";
+                    }
+                    <li>
+                        @player.Name
+                        <span class="@className"></span>
+                    </li>
+                }
+            </ul>
+        }
+
+        <div class="ready-button-container">
+            <button class="ready-button" @onclick="ToggleReady">Ready</button>
+        </div>
+    </div>
+
+    <div class="game-settings">
+        <EditForm Model="@_gameSettings" OnValidSubmit="@HandleGameStart">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="radio-input-container">
+                <h5>Select Word Pack</h5>
+                <InputRadioGroup @bind-Value="@_gameSettings.Pack">
+                    <label class="pack-radio">
+                        <InputRadio class="form-check-input" Value="Packs.Default" />
+                        Default
+                    </label>
+                    <label class="pack-radio">
+                        <InputRadio class="form-check-input" Value="Packs.Custom" disabled="true"/>
+                        Custom
+                    </label>
+                </InputRadioGroup>
+            </div>
+        
+            <button type="submit" disabled=@_isStartDisabled>Start</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private string? _currentUserName = "";
+    private string? _currentRoomCode = "";
+    private Player? _currentPlayer;
+
+    private List<Player>? _players = new();
+
+    private GameSettings _gameSettings = new();
+    private List<string> _customList = new();
+
+    private bool _isStartDisabled = true;
+
+    [Inject]
+    private HubConnection? HubConnection { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _currentUserName = playInfoContainer?.Value?.Nickname;
+        _currentRoomCode = playInfoContainer?.Value?.RoomCode;
+        _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
+        _currentPlayer = roomsService.GetRoom(_currentRoomCode!)!.GetPlayer(_currentUserName!);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await EnterRoom();
+        }
+        _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
+    }
+
+    /// <summary>
+    /// Runs when a new user joins the room
+    /// </summary>
+    /// <returns></returns>
+    public async Task EnterRoom()
+    {
+        try
+        {
+            HubConnection!.On<Player>("Update", Update);
+
+            HubConnection!.On<List<Word>>("GameStart", GameStart);
+
+            if(HubConnection!.State == HubConnectionState.Disconnected)
+            {
+                await HubConnection!.StartAsync();
+            }
+
+            await HubConnection.SendAsync("PlayerJoined", _currentUserName, _currentRoomCode);
+        }
+        catch(Exception e)
+        {
+            System.Diagnostics.Debug.Print($"couldn't start the hub client: {e.Message}");
+        }
+
+    }
+
+    /// <summary>
+    /// Updates the state of the lobby after the hub makes a change
+    /// </summary>
+    /// <param name="player"></param>
+    /// <returns></returns>
+    private async Task Update(Player player)
+    {
+        await InvokeAsync(StateHasChanged);
+
+        bool allPlayersReady = _players!.All(x => x.IsReady);
+
+        if (_currentPlayer!.IsHost && _players!.Count > 2 && allPlayersReady)
+        {
+            _isStartDisabled = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            _isStartDisabled = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>
+    /// Tells the hub to toggle the ready status of this player.
+    /// </summary>
+    /// <returns></returns>
+    private async Task ToggleReady()
+    {
+        await HubConnection!.SendAsync("ToggleReady", _currentUserName, _currentRoomCode);
+    }
+
+    /// <summary>
+    /// Tells the hub to start the game with the current game settings.
+    /// </summary>
+    /// <returns></returns>
+    private async Task HandleGameStart()
+    {
+        if(_gameSettings.Pack == Packs.Custom)
+        {
+            await HubConnection!.SendAsync("GameStart", _gameSettings, _currentRoomCode, _customList);
+        }
+        else
+        {
+            await HubConnection!.SendAsync("GameStart", _gameSettings, _currentRoomCode, null);
+        }
+    }
+
+    /// <summary>
+    /// Updates wordsService's word list after hub gives us the list.
+    /// </summary>
+    /// <param name="wordList"></param>
+    /// <returns></returns>
+    private void GameStart(List<Word> wordList)
+    {
+        wordsService.Words = wordList;
+        navigationManager.NavigateTo("/game");
+    }
+}

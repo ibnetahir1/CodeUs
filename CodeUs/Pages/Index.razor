@@ -1,0 +1,148 @@
+﻿@page "/"
+@using CodeUs.Shared.Models;
+@inject NavigationManager navigationManager
+@inject Shared.StateContainers.PlayInfoContainer playInfoContainer
+@inject Shared.StateContainers.IRoomsService roomsService
+@implements IDisposable
+
+<PageTitle>Index</PageTitle>
+
+<div class="show-navbar">
+    <div style="flex: 0.11">
+        <NavMenu />
+    </div>
+    
+    <div style="flex: 1">
+        <div style="width: 500px; height: 500px; border-style: solid; margin: 100px auto;">
+
+            <div class="button-group">
+                <button class="host-button @_hostButtonSelected" role="button" @onclick="HostButtonClicked">Host</button>
+                <button class="join-button @_joinButtonSelected" role="button" @onclick="JoinButtonClicked">Join</button>
+                <div class="play-form">
+                    <EditForm Model="@_playInfo" OnValidSubmit="@HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="pf-input-group">
+                            <label class="nickname-input">
+                                <InputText required @bind-Value="_playInfo.Nickname" />
+                                <span class="nickname-label">Nickname</span>
+                            </label>
+                        </div>
+
+                        @if (_joinButtonSelected == "selected")
+                        {
+                            <div class="pf-input-group">
+                                <label class="room-code-input">
+                                    <InputText required @bind-Value="_playInfo.RoomCode" />
+                                    <span class="room-code-label">Room Code</span>
+                                </label>
+                            </div>
+                        }
+
+                        <button type="submit">Play</button>
+                    </EditForm>
+
+                    @if (_invalidRoomCode)
+                    {
+                        <div class="invalid-room-code">
+                            That room does not exist.
+                        </div>
+                    }
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code{
+    private string _hostButtonSelected = "selected";
+    private string _joinButtonSelected = "not-selected";
+    private bool _invalidRoomCode = false;
+
+    private PlayInfo _playInfo = new();
+
+    protected override void OnInitialized()
+    {
+        playInfoContainer.OnStateChange += StateHasChanged;
+    }
+
+    private void HostButtonClicked()
+    {
+        _hostButtonSelected = "selected";
+        _joinButtonSelected = "not-selected";
+    }
+
+    private void JoinButtonClicked()
+    {
+        _hostButtonSelected = "not-selected";
+        _joinButtonSelected = "selected";
+    }
+
+    private void HandleValidSubmit()
+    {
+        // if joining
+        if(_joinButtonSelected == "selected")
+        {
+            // valid room code
+            if (roomsService.ContainsRoom(_playInfo.RoomCode))
+            {
+                playInfoContainer.SetValue(_playInfo);
+                roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
+                navigationManager.NavigateTo("/lobby");
+            }
+            // invalid room code
+            else
+            {
+                _invalidRoomCode = true;
+            }
+        }
+        // if hosting
+        else
+        {
+            // ensuring no duplicate rooms
+            bool created = false;
+            while (!created)
+            {
+                string roomCode = CreateRandomRoomCode();
+
+                if (!roomsService.ContainsRoom(roomCode))
+                {
+                    _playInfo.RoomCode = roomCode;
+                    created = true;
+                }
+            }
+
+            // add room to list of rooms
+            playInfoContainer.SetValue(_playInfo);
+            roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
+            navigationManager.NavigateTo("/lobby");
+        }
+    }
+
+    /// <summary>
+    /// Creating a random room code
+    /// </summary>
+    /// <returns>string containing room code</returns>
+    public string CreateRandomRoomCode()
+    {
+        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var stringChars = new char[5];
+        var random = new Random();
+
+        for (int i = 0; i < stringChars.Length; i++)
+        {
+            stringChars[i] = chars[random.Next(chars.Length)];
+        }
+
+        var finalString = new String(stringChars);
+
+        return finalString;
+    }
+
+    public void Dispose()
+    {
+        playInfoContainer.OnStateChange -= StateHasChanged;
+    }
+}

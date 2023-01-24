@@ -1,0 +1,406 @@
+﻿@page "/game"
+@using CodeUs.Shared.Models;
+@using Microsoft.AspNetCore.SignalR.Client;
+@inject NavigationManager navigationManager
+@inject Shared.StateContainers.PlayInfoContainer playInfoContainer
+@inject Shared.StateContainers.IWordsService wordsService
+@inject Shared.StateContainers.IRoomsService roomsService
+
+<div class="game-state-message">
+    <h3>@_gameState</h3>
+</div>
+
+<div class="voting-modal @_modalDisplay">
+    <div class="voting-modal-content">
+        <h2>@_playerThatCalledMeeting?.Name called the meeting.</h2>
+        <div class="close" @onclick="CloseModal">&times;</div>
+        <div class="player-list-meeting">
+            @foreach (var player in _players!)
+            {
+                if(player.IsGuesser == false)
+                {
+                    string faction = "";
+
+                    if(player.Name == _currentUserName)
+                    {
+                        faction = GetFaction(player);
+                    }
+
+                    string showVotingItems = "dont-show-voting-items";
+
+                    <div class="player-flex" @onclick="@(() => showVotingItems = "")">
+                        <div class="player-name-flex">@player.Name: @faction</div>
+                        <div class="check-container @showVotingItems" @onclick="@(() => {
+                                                                                        showVotingItems = "dont-show-voting-items";
+                                                                                        SendVote(_currentUserName!, player);
+                                                                                        })">
+                            <div class="vote-check"></div>
+                        </div>
+                        <div class="vote-cross @showVotingItems" @onclick="@(() => showVotingItems = "dont-show-voting-items")">&times;</div>
+                    </div>
+                }
+            }
+        </div>
+        <div>
+            <button class="skip-vote-button">Skip Vote</button>
+        </div>
+    </div>
+</div>
+
+<div class="player-and-words-container">
+    <div class="player-list-game">
+        <ul class="no-bullets">
+            @foreach (var player in _players!)
+            {
+                string faction = GetFaction(player);
+                
+                <li>
+                    @player.Name: @faction @player.IsGuesser
+                </li>
+            }
+        </ul>
+
+        <button @onclick="CallMeeting" disabled="@_meetingDisabled">Call Meeting</button>
+    </div>
+
+@if (_currentTurnPlayer != null)
+{
+    <div class="word-container">
+        @foreach (var word in wordsService.Words)
+        {
+            // which faction it belongs to
+            string wordFaction = "";
+            switch (word.Faction)
+            {
+                case Faction.Agent:
+                    wordFaction = "word-agent";
+                    break;
+                case Faction.Neutral:
+                    wordFaction = "word-neutral";
+                    break;
+                case Faction.Spy:
+                    wordFaction = "word-spy";
+                    break;
+            }
+
+            // only clickable by the guesser when its the guesser's turn
+            string clickable = "";
+            if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser)
+            {
+                clickable = "guesser-clickable";
+            }
+            else
+            {
+                clickable = "not-clickable";
+            }
+
+            // the guessed words are not guessable
+            string guessed = "";
+            if (word.IsGuessed)
+            {
+                guessed = "word-guessed";
+            }
+            else
+            {
+                guessed = "word-not-guessed";
+            }
+
+            // hide faction color from agents if the word is neutral or spy and is not guessed
+            string hideSpyWordsFromAgents = "";
+            Player thisPlayer = roomsService.GetPlayer(_currentUserName!, _currentRoomCode!);
+            if (thisPlayer.Faction == Faction.Agent && (word.Faction == Faction.Neutral || word.Faction == Faction.Spy) && word.IsGuessed == false)
+            {
+                hideSpyWordsFromAgents = "hide-faction-from-agents";
+            }
+            else
+            {
+                hideSpyWordsFromAgents = "dont-hide-faction-from-agents";
+            }
+
+            // hide faction color for guesser if the word isnt guessed
+            string hideFactionForGuesser = "";
+            if (_guesser?.Name == _currentUserName && word.IsGuessed == false)
+            {
+                hideFactionForGuesser = "hide-faction-for-guesser";
+            }
+            else
+            {
+                hideFactionForGuesser = "dont-hide-faction-for-guesser";
+            }
+
+            <div class="word @wordFaction @clickable @guessed @hideSpyWordsFromAgents @hideFactionForGuesser" @onclick="@(() => WordGuessed(word))">@word.Value</div>
+        }
+    </div>
+}
+</div>
+
+
+
+
+@if(_currentTurnPlayer != null)
+{
+    if(_gameOver == false)
+    {
+        // current player who isn't the guesser gets to give clue
+        if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser == false)
+        {
+            <div class="clue-form-container">
+                <EditForm Model="@_clue" OnValidSubmit="@ClueGiven">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <InputText placeholder="Enter a clue" @bind-Value="_clue.Hint"></InputText>
+                    <InputSelect @bind-Value="_clue.NumberOfWords">
+                        @for (int i = 0; i < 10; i++)
+                        {
+                            <option value="@i">@i</option>
+                        }
+                    </InputSelect>
+
+                    <button type="submit">Submit</button>
+                </EditForm>
+            </div>
+        }
+        if (_currentTurnPlayer.IsGuesser)
+        {
+            <div class="clue-container">
+                <span>@_clue.Hint</span> <span>@_clue.NumberOfWords</span>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="return-to-lobby-button-container">
+            <button class="return-to-lobby" @onclick="ReturnToLobby">Return to Lobby</button>
+        </div>
+    }
+}
+
+
+
+<div>
+    @if(_currentTurnPlayer != null){
+        <p>It is @_currentTurnPlayer!.Name's turn the clue is @_clue.Hint @_clue.NumberOfWords. Guesses left: @_clue.GuessesLeft</p>
+    }
+</div>
+<div>
+    @_guesser?.Name guessed @_lastWordGuessed?.Value
+</div>
+
+@code {
+    private string? _currentUserName = "";
+    private string? _currentRoomCode = "";
+    private string _gameState = "";
+    private string _modalDisplay = "modal-not-display";
+
+    private List<Player>? _players = new();
+    private Player? _guesser;
+    private Player? _currentTurnPlayer;
+    private Player? _playerThatCalledMeeting;
+
+    private Clue _clue = new();
+    private Word? _lastWordGuessed;
+    private bool _gameOver = false;
+    private bool _meetingDisabled = false;
+
+    [Inject]
+    private HubConnection? HubConnection { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _currentUserName = playInfoContainer?.Value?.Nickname;
+        _currentRoomCode = playInfoContainer?.Value?.RoomCode;
+        _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
+        _guesser = _players!.FirstOrDefault(x => x.IsGuesser == true);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            RegisterEvents();
+            if(_players!.FirstOrDefault(x => x.Name == _currentUserName)!.IsHost)
+            {
+                await SendClue(null);
+            }
+        }
+        _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
+        _clue = roomsService.GetRoom(_currentRoomCode!)!.Clue;
+    }
+
+    private void RegisterEvents()
+    {
+        HubConnection!.On("NextTurnAfterClue", NextTurnAfterClue);
+        HubConnection!.On<Word>("NextStepAfterGuess", NextStepAfterGuess);
+        HubConnection!.On("NextTurnAfterGuesser", NextTurnAfterGuesser);
+        HubConnection!.On("GameOverAgentsWin", GameOverAgentsWin);
+        HubConnection!.On("GameOverSpyWins", GameOverSpyWins);
+        HubConnection!.On<Player>("MeetingCalled", MeetingCalled);
+    }
+
+    /// <summary>
+    /// send clue to the hub
+    /// </summary>
+    /// <returns></returns>
+    private async Task SendClue(Clue? clue)
+    {
+        await HubConnection!.SendAsync("ClueGiven", clue, _currentRoomCode);
+    }
+
+    /// <summary>
+    /// send guess to the hub
+    /// </summary>
+    /// <param name="word"></param>
+    /// <returns></returns>
+    private async Task SendGuess(Word word)
+    {
+        await HubConnection!.SendAsync("WordGuessed", word, _currentRoomCode);
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    /// <returns></returns>
+    private async Task NextTurnAfterClue()
+    {
+        await InvokeAsync(StateHasChanged);
+        await UpdateGameState();
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    /// <param name="word"></param>
+    /// <returns></returns>
+    private async Task NextStepAfterGuess(Word word)
+    {
+        wordsService.WordGuessed(word);
+        _lastWordGuessed = word;
+
+        bool allAgentsGuessed = wordsService.Words.Where(x => x.Faction == Faction.Agent).All(x => x.IsGuessed == true);
+        bool allSpiesGuessed = wordsService.Words.Where(x => x.Faction == Faction.Spy).All(x => x.IsGuessed == true);
+        //System.Diagnostics.Debug.WriteLine("all agents guessed? " + allAgentsGuessed);
+
+        if(allAgentsGuessed && _guesser!.Name == _currentUserName)
+        {
+            await HubConnection!.SendAsync("AllAgentsGuessed", _currentRoomCode);
+        }
+
+        else if (allSpiesGuessed)
+        {
+            await HubConnection!.SendAsync("AllSpiesGuessed", _currentRoomCode);
+        }
+        else if (_clue.GuessesLeft == 0 && _guesser!.Name == _currentUserName)
+        {
+            await HubConnection!.SendAsync("GuesserTurnDone", _currentRoomCode);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    /// <returns></returns>
+    private async Task NextTurnAfterGuesser()
+    {
+        await UpdateGameState();
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    private void GameOverAgentsWin()
+    {
+        _gameState = "All agent words guessed! Agents Win!";
+        _gameOver = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    private void GameOverSpyWins()
+    {
+        _gameState = "All Spy Words Guessed! Spy Wins!";
+        _gameOver = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    private void MeetingCalled(Player player)
+    {
+        _modalDisplay = "modal-display";
+        _playerThatCalledMeeting = player;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UpdateGameState()
+    {
+        _currentTurnPlayer = roomsService.GetCurrentTurnPlayer(_currentRoomCode!);
+
+        if (_currentTurnPlayer.IsGuesser && _currentTurnPlayer.Name == _currentUserName)
+        {
+            _gameState = "Make your guess";
+        }
+        else if(_currentTurnPlayer.IsGuesser)
+        {
+            _gameState = $"Waiting for {_currentTurnPlayer.Name} to guess";
+        }
+        else if (_currentTurnPlayer.Name == _currentUserName)
+        {
+            _gameState = "Give a clue";
+        }
+        else
+        {
+            _gameState = $"Waiting for {_currentTurnPlayer.Name} to give a clue";
+        }
+        await InvokeAsync(StateHasChanged); // the problem COULD be the async (unlikely)
+    }
+
+    private async Task ClueGiven()
+    {
+        await InvokeAsync(StateHasChanged);
+        await SendClue(_clue);
+    }
+
+    private async Task WordGuessed(Word word)
+    {
+        await SendGuess(word);
+    }
+
+    private void ReturnToLobby()
+    {
+        navigationManager.NavigateTo("/lobby");
+    }
+
+    private void CallMeeting()
+    {
+        _meetingDisabled = true;
+        HubConnection!.SendAsync("CallMeeting", _currentUserName, _currentRoomCode);
+    }
+
+    private void CloseModal()
+    {
+        _modalDisplay = "modal-not-display";
+    }
+
+    private string GetFaction(Player player)
+    {
+        switch (player.Faction)
+        {
+            case Faction.Agent:
+                return "Agent";
+            case Faction.Spy:
+                return "Spy";
+            default:
+                return "Neutral";
+        }
+    }
+
+    private void SendVote(string thisUsername, Player playerVoted)
+    {
+        
+    }
+}
