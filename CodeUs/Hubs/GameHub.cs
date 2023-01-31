@@ -53,56 +53,57 @@ namespace CodeUs.Hubs
             await Clients.Group(roomCode).SendAsync("GameStart", wordList);
         }
 
-        public async Task ClueGiven(Clue? clue, string roomCode)
+        public async Task ClueGiven(Clue? clue, string playerName, string roomCode)
         {
+            //Player? player = null;
             if (clue != null)
             {
                 _roomsService.SetClue(clue, roomCode);
+                GameLog log = new GameLog();
+                log.Log = $"{playerName} has given the clue: {clue.Hint} {clue.NumberOfWords}";
+                log.LogType = LogType.Clue;
+                _roomsService.AddGameLog(log, roomCode);
             }
             _roomsService.SetNextTurn(roomCode);
             await Clients.Group(roomCode).SendAsync("NextTurnAfterClue");
         }
 
-        public async Task WordGuessed(Word word, string roomCode)
+        public async Task WordGuessed(Word word, string playerName, string roomCode)
         {
             _roomsService.DecrementGuessesLeft(roomCode);
+
+            GameLog log = new GameLog();
+            log.Log = $"{playerName} guessed: {word.Value}";
+            log.LogType = LogType.Guess;
+            _roomsService.AddGameLog(log, roomCode);
+
             await Clients.Group(roomCode).SendAsync("NextStepAfterGuess", word);
         }
 
         public async Task GuesserTurnDone(string roomCode)
         {
-            _roomsService.SetNextTurn(roomCode);
-            await Clients.Group(roomCode).SendAsync("NextTurnAfterGuesser");
+            if (_roomsService.GetRoom(roomCode)!.TurnsLeft == 0)
+            {
+                ResetGameState(roomCode);
+                await Clients.Group(roomCode).SendAsync("TurnLimitReached");
+            }
+            else
+            {
+                _roomsService.SetNextTurn(roomCode);
+                await Clients.Group(roomCode).SendAsync("NextTurnAfterGuesser");
+            }
         }
 
         public async Task AllAgentsGuessed(string roomCode)
         {
-            List<Player> players = _roomsService.GetPlayers(roomCode);
-            foreach (Player player in players)
-            {
-                player.IsGuesser = false;
-                player.IsTurn = false;
-                player.WasLastTurn = false;
-                player.IsReady = false;
-            }
-
-            _roomsService.GetRoom(roomCode)!.Clue = new();
+            ResetGameState(roomCode);
 
             await Clients.Group(roomCode).SendAsync("GameOverAgentsWin");
         }
 
         public async Task AllSpiesGuessed(string roomCode)
         {
-            List<Player> players = _roomsService.GetPlayers(roomCode);
-            foreach (Player player in players)
-            {
-                player.IsGuesser = false;
-                player.IsTurn = false;
-                player.WasLastTurn = false;
-                player.IsReady = false;
-            }
-
-            _roomsService.GetRoom(roomCode)!.Clue = new();
+            ResetGameState(roomCode);
 
             await Clients.Group(roomCode).SendAsync("GameOverSpyWins");
         }
@@ -118,6 +119,39 @@ namespace CodeUs.Hubs
             }
         }
 
+        public async Task PlayerVoted(string voter, string votee, string roomCode)
+        {
+            _roomsService.GetRoom(roomCode)!.PlayerVoted(voter, votee);
+            await Clients.Group(roomCode).SendAsync("PlayerVoted");
+        }
+
+        public async Task AllPlayersVoted(string roomCode)
+        {
+            Player? mostVoted = _roomsService.CheckIfPlayerVotedOut(roomCode);
+
+            if (mostVoted != null)
+            {
+                await Clients.Group(roomCode).SendAsync("PlayerVotedOut", mostVoted);
+            }
+            else
+            {
+                await Clients.Group(roomCode).SendAsync("NoPlayerVotedOut");
+            }
+        }
+
+        public async Task ContinueGameAfterVoting(string roomCode)
+        {
+            Room room = _roomsService.GetRoom(roomCode)!;
+
+            room.Votes = new();
+            foreach (var player in room.Players)
+            {
+                player.HasVoted = false;
+            }
+
+            await Clients.Group(roomCode).SendAsync("ContinueGameAfterVoting");
+        }
+
         public override Task OnConnectedAsync()
         {
             Console.WriteLine($"{Context.ConnectionId} connected");
@@ -128,6 +162,25 @@ namespace CodeUs.Hubs
         {
             Console.WriteLine($"Disconnected {e?.Message} {Context.ConnectionId}");
             await base.OnDisconnectedAsync(e);
+        }
+
+        private void ResetGameState(string roomCode)
+        {
+            List<Player> players = _roomsService.GetPlayers(roomCode);
+            foreach (Player player in players)
+            {
+                player.IsGuesser = false;
+                player.IsTurn = false;
+                player.WasLastTurn = false;
+                player.IsReady = false;
+                player.HasMeeting = true;
+                player.HasVoted = false;
+            }
+
+            Room room = _roomsService.GetRoom(roomCode)!;
+            room.Clue = new();
+            room.Votes = new();
+            room.TurnsLeft = 8;
         }
     }
 }

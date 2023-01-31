@@ -27,5 +27,11 @@ namespace CodeUs.Shared.StateContainers
         public void SetClue(Clue clue, string roomCode);
 
         public void DecrementGuessesLeft(string roomCode);
+
+        public void PlayerVoted(string voter, string votee, string roomCode);
+
+        public Player? CheckIfPlayerVotedOut(string roomCode);
+
+        public void AddGameLog(GameLog log, string roomCode);
     }
 }

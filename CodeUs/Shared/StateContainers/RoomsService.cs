@@ -124,5 +124,26 @@ namespace CodeUs.Shared.StateContainers
 
             room.Clue.GuessesLeft--;
         }
+
+        public void PlayerVoted(string voter, string votee, string roomCode)
+        {
+            Room room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!;
+
+            room.PlayerVoted(voter, votee);
+        }
+
+        public Player? CheckIfPlayerVotedOut(string roomCode)
+        {
+            Room room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!;
+
+            return room.CheckIfPlayerVotedOut();
+        }
+
+        public void AddGameLog(GameLog log, string roomCode)
+        {
+            Room room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!;
+
+            room.GameLogs.Add(log);
+        }
     }
 }

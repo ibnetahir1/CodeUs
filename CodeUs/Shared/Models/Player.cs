@@ -9,6 +9,7 @@
         public bool IsTurn { get; set; } = false;
         public bool WasLastTurn { get; set; } = false;
         public bool HasMeeting { get; set; } = true;
+        public bool HasVoted { get; set; } = false;
         public Faction Faction { get; set; }
     }
 }

@@ -6,202 +6,285 @@
 @inject Shared.StateContainers.IWordsService wordsService
 @inject Shared.StateContainers.IRoomsService roomsService
 
-<div class="game-state-message">
-    <h3>@_gameState</h3>
-</div>
+<div class="@_backgroundColorClass">
 
-<div class="voting-modal @_modalDisplay">
-    <div class="voting-modal-content">
-        <h2>@_playerThatCalledMeeting?.Name called the meeting.</h2>
-        <div class="close" @onclick="CloseModal">&times;</div>
-        <div class="player-list-meeting">
-            @foreach (var player in _players!)
-            {
-                if(player.IsGuesser == false)
+    <div class="game-state-message">
+        <h3>@_gameState</h3>
+    </div>
+
+    <div class="voting-modal @_modalDisplay">
+        <div class="voting-modal-content">
+            <h2>@_playerThatCalledMeeting?.Name called the meeting.</h2>
+            <div class="close" @onclick="CloseModal">&times;</div>
+            <div class="player-list-meeting">
+                @foreach (var player in _players!)
                 {
-                    string faction = "";
-
-                    if(player.Name == _currentUserName)
+                    if(player.IsGuesser == false)
                     {
-                        faction = GetFaction(player);
+                        string faction = "";
+
+                        if(player.Name == _currentUserName)
+                        {
+                            faction = GetFaction(player);
+                        }
+
+                        string playerVoted = "player-not-voted";
+
+                        if(player.HasVoted)
+                        {
+                            playerVoted = "player-voted";
+                        }
+
+                        if (!_playerVotingClasses.ContainsKey(player.Name))
+                        {
+                            _playerVotingClasses.Add(player.Name, "dont-show-voting-items");
+                        }
+
+                        string disableVoting = "";
+
+                        if(_players.FirstOrDefault(x => x.Name == _currentUserName!)!.HasVoted)
+                        {
+                            disableVoting = "disable-voting";
+                        }
+
+                        <div class="player-flex">
+                            <div class="@playerVoted"></div>
+                            <div class="player-name-flex @disableVoting" @onclick="@(() => {
+                                                            _playerVotingClasses = _playerVotingClasses.ToDictionary(x => x.Key, x => "dont-show-voting-items");
+                                                            _playerVotingClasses[player.Name] = "";
+                                                            InvokeAsync(StateHasChanged);
+                                                            })">
+                                @player.Name: @faction
+                            </div>
+                            <div class="@_votesDisplay">
+                                <b>Votes:</b> 
+                                @{
+                                    var votes = roomsService.GetRoom(_currentRoomCode!)!.Votes;
+                                    var votee = votes.FirstOrDefault(x => x.Key == player.Name);
+                                    @if (!votee.Equals(default(KeyValuePair<string, List<string>>)))
+                                    {
+                                        foreach(var voter in votee.Value)
+                                        {
+                                            <span style="border-left-style: solid; border-right-style: solid"> @voter </span>
+                                        }
+                                    }
+                                }
+                            </div>
+                            <div class="check-container @_playerVotingClasses[player.Name]" @onclick="@(() => {
+                                                                                            _playerVotingClasses[player.Name] = "dont-show-voting-items";
+                                                                                            InvokeAsync(StateHasChanged);
+                                                                                            SendVote(_currentUserName!, player);
+                                                                                            })">
+                                <div class="vote-check"></div>
+                            </div>
+                            <div class="vote-cross @_playerVotingClasses[player.Name]" @onclick="@(() => { _playerVotingClasses[player.Name] = "dont-show-voting-items"; InvokeAsync(StateHasChanged);})"></div>
+                        </div>
+                    }
+                }
+            </div>
+            <div>
+                <button class="skip-vote-button" @onclick="@(() => SendVote(_currentUserName!, new Player(){Name = "SkipVote"}))">Skip Vote</button>
+                <span class="@_votesDisplay">
+                    <b>Votes:</b>
+                    @{
+                        var allVotes = roomsService.GetRoom(_currentRoomCode!)!.Votes;
+                        var skipVote = allVotes.FirstOrDefault(x => x.Key == "SkipVote");
+                        @if (!skipVote.Equals(default(KeyValuePair<string, List<string>>)))
+                        {
+                            foreach (var voter in skipVote.Value)
+                            {
+                                <span style="border-left-style: solid; border-right-style: solid; margin-left: 5px;"> @voter </span>
+                            }
+                        }
+                    }
+                </span>
+                
+            </div>
+        </div>
+    </div>
+
+    <div class="player-and-words-container">
+        <div class="player-list-game">
+            <ul class="no-bullets">
+                @foreach (var player in _players!)
+                {
+                    string faction = GetFaction(player);
+                
+                    <li>
+                        @player.Name: @faction @player.IsGuesser
+                    </li>
+                }
+            </ul>
+
+            <button @onclick="CallMeeting" disabled="@_meetingDisabled">Call Meeting</button>
+        </div>
+
+        @if (_currentTurnPlayer != null)
+        {
+            <div class="word-container">
+                @foreach (var word in wordsService.Words)
+                {
+                    // which faction it belongs to
+                    string wordFaction = "";
+                    switch (word.Faction)
+                    {
+                        case Faction.Agent:
+                            wordFaction = "word-agent";
+                            break;
+                        case Faction.Neutral:
+                            wordFaction = "word-neutral";
+                            break;
+                        case Faction.Spy:
+                            wordFaction = "word-spy";
+                            break;
                     }
 
-                    string showVotingItems = "dont-show-voting-items";
+                    // only clickable by the guesser when its the guesser's turn
+                    string clickable = "";
+                    if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser)
+                    {
+                        clickable = "guesser-clickable";
+                    }
+                    else
+                    {
+                        clickable = "not-clickable";
+                    }
 
-                    <div class="player-flex" @onclick="@(() => showVotingItems = "")">
-                        <div class="player-name-flex">@player.Name: @faction</div>
-                        <div class="check-container @showVotingItems" @onclick="@(() => {
-                                                                                        showVotingItems = "dont-show-voting-items";
-                                                                                        SendVote(_currentUserName!, player);
-                                                                                        })">
-                            <div class="vote-check"></div>
-                        </div>
-                        <div class="vote-cross @showVotingItems" @onclick="@(() => showVotingItems = "dont-show-voting-items")">&times;</div>
-                    </div>
+                    // the guessed words are not guessable
+                    string guessed = "";
+                    if (word.IsGuessed)
+                    {
+                        guessed = "word-guessed";
+                    }
+                    else
+                    {
+                        guessed = "word-not-guessed";
+                    }
+
+                    // hide faction color from agents if the word is neutral or spy and is not guessed
+                    string hideSpyWordsFromAgents = "";
+                    Player thisPlayer = roomsService.GetPlayer(_currentUserName!, _currentRoomCode!);
+                    if (thisPlayer.Faction == Faction.Agent && (word.Faction == Faction.Neutral || word.Faction == Faction.Spy) && word.IsGuessed == false)
+                    {
+                        hideSpyWordsFromAgents = "hide-faction-from-agents";
+                    }
+                    else
+                    {
+                        hideSpyWordsFromAgents = "dont-hide-faction-from-agents";
+                    }
+
+                    // hide faction color for guesser if the word isnt guessed
+                    string hideFactionForGuesser = "";
+                    if (_guesser?.Name == _currentUserName && word.IsGuessed == false)
+                    {
+                        hideFactionForGuesser = "hide-faction-for-guesser";
+                    }
+                    else
+                    {
+                        hideFactionForGuesser = "dont-hide-faction-for-guesser";
+                    }
+
+                    <div class="word @wordFaction @clickable @guessed @hideSpyWordsFromAgents @hideFactionForGuesser" @onclick="@(() => WordGuessed(word))">@word.Value</div>
                 }
-            }
-        </div>
-        <div>
-            <button class="skip-vote-button">Skip Vote</button>
-        </div>
-    </div>
-</div>
-
-<div class="player-and-words-container">
-    <div class="player-list-game">
-        <ul class="no-bullets">
-            @foreach (var player in _players!)
-            {
-                string faction = GetFaction(player);
-                
-                <li>
-                    @player.Name: @faction @player.IsGuesser
-                </li>
-            }
-        </ul>
-
-        <button @onclick="CallMeeting" disabled="@_meetingDisabled">Call Meeting</button>
-    </div>
-
-@if (_currentTurnPlayer != null)
-{
-    <div class="word-container">
-        @foreach (var word in wordsService.Words)
-        {
-            // which faction it belongs to
-            string wordFaction = "";
-            switch (word.Faction)
-            {
-                case Faction.Agent:
-                    wordFaction = "word-agent";
-                    break;
-                case Faction.Neutral:
-                    wordFaction = "word-neutral";
-                    break;
-                case Faction.Spy:
-                    wordFaction = "word-spy";
-                    break;
-            }
-
-            // only clickable by the guesser when its the guesser's turn
-            string clickable = "";
-            if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser)
-            {
-                clickable = "guesser-clickable";
-            }
-            else
-            {
-                clickable = "not-clickable";
-            }
-
-            // the guessed words are not guessable
-            string guessed = "";
-            if (word.IsGuessed)
-            {
-                guessed = "word-guessed";
-            }
-            else
-            {
-                guessed = "word-not-guessed";
-            }
-
-            // hide faction color from agents if the word is neutral or spy and is not guessed
-            string hideSpyWordsFromAgents = "";
-            Player thisPlayer = roomsService.GetPlayer(_currentUserName!, _currentRoomCode!);
-            if (thisPlayer.Faction == Faction.Agent && (word.Faction == Faction.Neutral || word.Faction == Faction.Spy) && word.IsGuessed == false)
-            {
-                hideSpyWordsFromAgents = "hide-faction-from-agents";
-            }
-            else
-            {
-                hideSpyWordsFromAgents = "dont-hide-faction-from-agents";
-            }
-
-            // hide faction color for guesser if the word isnt guessed
-            string hideFactionForGuesser = "";
-            if (_guesser?.Name == _currentUserName && word.IsGuessed == false)
-            {
-                hideFactionForGuesser = "hide-faction-for-guesser";
-            }
-            else
-            {
-                hideFactionForGuesser = "dont-hide-faction-for-guesser";
-            }
-
-            <div class="word @wordFaction @clickable @guessed @hideSpyWordsFromAgents @hideFactionForGuesser" @onclick="@(() => WordGuessed(word))">@word.Value</div>
-        }
-    </div>
-}
-</div>
-
-
-
-
-@if(_currentTurnPlayer != null)
-{
-    if(_gameOver == false)
-    {
-        // current player who isn't the guesser gets to give clue
-        if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser == false)
-        {
-            <div class="clue-form-container">
-                <EditForm Model="@_clue" OnValidSubmit="@ClueGiven">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-
-                    <InputText placeholder="Enter a clue" @bind-Value="_clue.Hint"></InputText>
-                    <InputSelect @bind-Value="_clue.NumberOfWords">
-                        @for (int i = 0; i < 10; i++)
-                        {
-                            <option value="@i">@i</option>
-                        }
-                    </InputSelect>
-
-                    <button type="submit">Submit</button>
-                </EditForm>
             </div>
         }
-        if (_currentTurnPlayer.IsGuesser)
+
+        <div class="game-information">
+            <div class="turns-left">
+                Turns Left: @_turnsLeft
+            </div>
+            <div class="game-logs">
+                @foreach(var log in roomsService.GetRoom(_currentRoomCode!)!.GameLogs)
+                {
+                    <div class="log">@log.Log</div>
+                }
+            </div>
+        </div>
+    </div>
+
+
+    @if(_currentTurnPlayer != null)
+    {
+        if(_gameOver == false)
         {
-            <div class="clue-container">
-                <span>@_clue.Hint</span> <span>@_clue.NumberOfWords</span>
+            // current player who isn't the guesser gets to give clue
+            if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser == false)
+            {
+                <div class="clue-form-container">
+                    <EditForm Model="@_clue" OnValidSubmit="@ClueGiven">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <InputText placeholder="Enter a clue" @bind-Value="_clue.Hint"></InputText>
+                        <InputSelect @bind-Value="_clue.NumberOfWords">
+                            @for (int i = 0; i < 10; i++)
+                            {
+                                <option value="@i">@i</option>
+                            }
+                        </InputSelect>
+
+                        <button type="submit">Submit</button>
+                    </EditForm>
+                </div>
+            }
+            if (_currentTurnPlayer.IsGuesser)
+            {
+                <div class="clue-container">
+                    <span>@_clue.Hint</span> <span>@_clue.NumberOfWords</span>
+                    @if (_players.FirstOrDefault(x => x.Name == _currentUserName!)!.IsGuesser)
+                    {
+                        <span class="skip-turn-container"><button class="skip-turn" @onclick="SkipTurn">Skip Turn</button></span>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="return-to-lobby-button-container">
+                <button class="return-to-lobby" @onclick="ReturnToLobby">Return to Lobby</button>
             </div>
         }
     }
-    else
-    {
-        <div class="return-to-lobby-button-container">
-            <button class="return-to-lobby" @onclick="ReturnToLobby">Return to Lobby</button>
-        </div>
-    }
-}
 
 
 
-<div>
-    @if(_currentTurnPlayer != null){
-        <p>It is @_currentTurnPlayer!.Name's turn the clue is @_clue.Hint @_clue.NumberOfWords. Guesses left: @_clue.GuessesLeft</p>
-    }
-</div>
-<div>
-    @_guesser?.Name guessed @_lastWordGuessed?.Value
+    @*<div>
+        @if(_currentTurnPlayer != null){
+            <p>It is @_currentTurnPlayer!.Name's turn the clue is @_clue.Hint @_clue.NumberOfWords. Guesses left: @_clue.GuessesLeft</p>
+        }
+    </div>
+    <div>
+        @_guesser?.Name guessed @_lastWordGuessed?.Value
+    </div>
+    <div>
+        Turns Left: @_turnsLeft
+    </div>*@
+
 </div>
 
 @code {
     private string? _currentUserName = "";
     private string? _currentRoomCode = "";
     private string _gameState = "";
-    private string _modalDisplay = "modal-not-display";
+    private List<string> _gameLogs = new();
 
+    //css classes
+    private string _modalDisplay = "modal-not-display";
+    private string _votesDisplay = "votes-not-display";
+    private string _backgroundColorClass = "";
+
+    //players info
     private List<Player>? _players = new();
     private Player? _guesser;
     private Player? _currentTurnPlayer;
     private Player? _playerThatCalledMeeting;
+    private Dictionary<string, string> _playerVotingClasses = new();
 
     private Clue _clue = new();
     private Word? _lastWordGuessed;
     private bool _gameOver = false;
     private bool _meetingDisabled = false;
+    private int _turnsLeft = 0;
 
     [Inject]
     private HubConnection? HubConnection { get; set; }
@@ -226,6 +309,7 @@
         }
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
         _clue = roomsService.GetRoom(_currentRoomCode!)!.Clue;
+        _turnsLeft = roomsService.GetRoom(_currentRoomCode!)!.TurnsLeft;
     }
 
     private void RegisterEvents()
@@ -235,7 +319,12 @@
         HubConnection!.On("NextTurnAfterGuesser", NextTurnAfterGuesser);
         HubConnection!.On("GameOverAgentsWin", GameOverAgentsWin);
         HubConnection!.On("GameOverSpyWins", GameOverSpyWins);
+        HubConnection!.On("TurnLimitReached", TurnLimitReached);
         HubConnection!.On<Player>("MeetingCalled", MeetingCalled);
+        HubConnection!.On("PlayerVoted", PlayerVoted);
+        HubConnection!.On<Player>("PlayerVotedOut", PlayerVotedOut);
+        HubConnection!.On("NoPlayerVotedOut", NoPlayerVotedOut);
+        HubConnection!.On("ContinueGameAfterVoting", ContinueGameAfterVoting);
     }
 
     /// <summary>
@@ -244,7 +333,7 @@
     /// <returns></returns>
     private async Task SendClue(Clue? clue)
     {
-        await HubConnection!.SendAsync("ClueGiven", clue, _currentRoomCode);
+        await HubConnection!.SendAsync("ClueGiven", clue, _currentUserName, _currentRoomCode);
     }
 
     /// <summary>
@@ -254,7 +343,7 @@
     /// <returns></returns>
     private async Task SendGuess(Word word)
     {
-        await HubConnection!.SendAsync("WordGuessed", word, _currentRoomCode);
+        await HubConnection!.SendAsync("WordGuessed", word, _currentUserName, _currentRoomCode);
     }
 
     /// <summary>
@@ -263,7 +352,6 @@
     /// <returns></returns>
     private async Task NextTurnAfterClue()
     {
-        await InvokeAsync(StateHasChanged);
         await UpdateGameState();
     }
 
@@ -279,18 +367,17 @@
 
         bool allAgentsGuessed = wordsService.Words.Where(x => x.Faction == Faction.Agent).All(x => x.IsGuessed == true);
         bool allSpiesGuessed = wordsService.Words.Where(x => x.Faction == Faction.Spy).All(x => x.IsGuessed == true);
-        //System.Diagnostics.Debug.WriteLine("all agents guessed? " + allAgentsGuessed);
 
         if(allAgentsGuessed && _guesser!.Name == _currentUserName)
         {
             await HubConnection!.SendAsync("AllAgentsGuessed", _currentRoomCode);
         }
 
-        else if (allSpiesGuessed)
+        else if (allSpiesGuessed && _guesser!.Name == _currentUserName)
         {
             await HubConnection!.SendAsync("AllSpiesGuessed", _currentRoomCode);
         }
-        else if (_clue.GuessesLeft == 0 && _guesser!.Name == _currentUserName)
+        else if ((_clue.GuessesLeft == 0 || word.Faction != Faction.Agent) && _guesser!.Name == _currentUserName)
         {
             await HubConnection!.SendAsync("GuesserTurnDone", _currentRoomCode);
         }
@@ -312,7 +399,9 @@
     private void GameOverAgentsWin()
     {
         _gameState = "All agent words guessed! Agents Win!";
+        _meetingDisabled = true;
         _gameOver = true;
+        _backgroundColorClass = "agents-win-color";
         InvokeAsync(StateHasChanged);
     }
 
@@ -322,7 +411,18 @@
     private void GameOverSpyWins()
     {
         _gameState = "All Spy Words Guessed! Spy Wins!";
+        _meetingDisabled = true;
         _gameOver = true;
+        _backgroundColorClass = "spy-wins-color";
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void TurnLimitReached()
+    {
+        _gameState = "No More Turns Left! Spy Wins!";
+        _meetingDisabled = true;
+        _gameOver = true;
+        _backgroundColorClass = "spy-wins-color";
         InvokeAsync(StateHasChanged);
     }
 
@@ -333,6 +433,71 @@
     {
         _modalDisplay = "modal-display";
         _playerThatCalledMeeting = player;
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    private void PlayerVoted()
+    {
+        if (_players!.All(x => x.HasVoted) && _players!.FirstOrDefault(x => x.Name == _currentUserName)!.IsHost)
+        {
+            HubConnection!.SendAsync("AllPlayersVoted", _currentRoomCode);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    private void PlayerVotedOut(Player votedOut)
+    {
+        _votesDisplay = "votes-display";
+        InvokeAsync(StateHasChanged);
+
+        var delay = Task.Delay(3000).ContinueWith(_ =>
+        {
+            if(votedOut.Faction == Faction.Spy)
+            {
+                _gameState = $"{votedOut.Name} got voted out! Agents Win!";
+                _backgroundColorClass = "agents-win-color";
+            }
+            else
+            {
+                _gameState = $"{votedOut.Name} got voted out! Spy Wins!";
+                _backgroundColorClass = "spy-wins-color";
+            }
+            CloseModal();
+            _gameOver = true;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    private void NoPlayerVotedOut()
+    {
+        _votesDisplay = "votes-display";
+        InvokeAsync(StateHasChanged);
+
+        if(_currentUserName == _guesser!.Name)
+        {
+            var delay = Task.Delay(3000).ContinueWith(_ =>
+            {
+                HubConnection!.SendAsync("ContinueGameAfterVoting", _currentRoomCode);
+            });
+        }
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    private void ContinueGameAfterVoting()
+    {
+        _votesDisplay = "votes-not-display";
+        CloseModal();
         InvokeAsync(StateHasChanged);
     }
 
@@ -361,7 +526,7 @@
 
     private async Task ClueGiven()
     {
-        await InvokeAsync(StateHasChanged);
+        //await InvokeAsync(StateHasChanged);
         await SendClue(_clue);
     }
 
@@ -401,6 +566,13 @@
 
     private void SendVote(string thisUsername, Player playerVoted)
     {
-        
+        _playerVotingClasses[playerVoted.Name] = "dont-show-voting-items";
+        HubConnection!.SendAsync("PlayerVoted", thisUsername, playerVoted.Name, _currentRoomCode);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SkipTurn()
+    {
+        await HubConnection!.SendAsync("GuesserTurnDone", _currentRoomCode);
     }
 }

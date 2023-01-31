@@ -5,6 +5,14 @@
         public string RoomCode { get; set; } = "";
         public List<Player> Players { get; set; } = new();
         public Clue Clue { get; set; } = new();
+        public int TurnsLeft { get; set; } = 8;
+
+        /// <summary>
+        /// first string is the player's name, and the list is the names of the players voting this player.
+        /// </summary>
+        public Dictionary<string, List<string>> Votes { get; set; } = new();
+
+        public List<GameLog> GameLogs { get; set; } = new();
 
         public void AddPlayer(Player player)
         {
@@ -80,8 +88,49 @@
                 Players[guesserIndex].IsTurn = false;
                 Players[lastTurnIndex].WasLastTurn = false;
                 Players[currentTurnIndex].IsTurn = true;
+                TurnsLeft--;
                 turnSet = true;
             }
+        }
+
+        public void PlayerVoted(string voter, string votee)
+        {
+            Player voterPlayer = Players.FirstOrDefault(x => x.Name == voter)!;
+            voterPlayer.HasVoted = true;
+
+            if(Votes.ContainsKey(votee))
+            {
+                Votes[votee].Add(voter);
+            }
+            else
+            {
+                Votes.Add(votee, new List<string> { voter });
+            }
+        }
+
+        public Player? CheckIfPlayerVotedOut()
+        {
+            Player? playerVoted = null;
+            int mostVotes = 0;
+            foreach(var votee in Votes)
+            {
+                if (votee.Key == "SkipVote" && votee.Value.Count >= mostVotes)
+                {
+                    playerVoted = null;
+                    mostVotes = votee.Value.Count;
+                }
+                if (votee.Value.Count > mostVotes)
+                {
+                    playerVoted = Players.FirstOrDefault(x => x.Name == votee.Key);
+                    mostVotes = votee.Value.Count;
+                }
+                else if (votee.Value.Count == mostVotes)
+                {
+                    playerVoted = null;
+                }
+            }
+
+            return playerVoted;
         }
     }
 }

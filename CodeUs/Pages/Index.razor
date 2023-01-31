@@ -43,10 +43,10 @@
                         <button type="submit">Play</button>
                     </EditForm>
 
-                    @if (_invalidRoomCode)
+                    @if (_invalidSubmit)
                     {
                         <div class="invalid-room-code">
-                            That room does not exist.
+                            @_errorMessage
                         </div>
                     }
 
@@ -59,7 +59,8 @@
 @code{
     private string _hostButtonSelected = "selected";
     private string _joinButtonSelected = "not-selected";
-    private bool _invalidRoomCode = false;
+    private bool _invalidSubmit = false;
+    private string _errorMessage = "";
 
     private PlayInfo _playInfo = new();
 
@@ -85,39 +86,57 @@
         // if joining
         if(_joinButtonSelected == "selected")
         {
-            // valid room code
-            if (roomsService.ContainsRoom(_playInfo.RoomCode))
+            // valid room code and name
+            if (roomsService.ContainsRoom(_playInfo.RoomCode) && _playInfo.Nickname != "SkipVote" && roomsService.GetRoom(_playInfo.RoomCode)!.Players.FirstOrDefault(x => x.Name == _playInfo.Nickname) == null)
             {
                 playInfoContainer.SetValue(_playInfo);
                 roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
                 navigationManager.NavigateTo("/lobby");
             }
             // invalid room code
+            else if (!roomsService.ContainsRoom(_playInfo.RoomCode))
+            {
+                _errorMessage = "That room does not exist";
+                _invalidSubmit = true;
+            }
+            // invalid name
             else
             {
-                _invalidRoomCode = true;
+                _errorMessage = "Invalid name";
+                _invalidSubmit = true;
             }
         }
         // if hosting
         else
         {
-            // ensuring no duplicate rooms
-            bool created = false;
-            while (!created)
+            // invalid name
+            if(_playInfo.Nickname == "SkipVote")
             {
-                string roomCode = CreateRandomRoomCode();
-
-                if (!roomsService.ContainsRoom(roomCode))
-                {
-                    _playInfo.RoomCode = roomCode;
-                    created = true;
-                }
+                _errorMessage = "Invalid name";
+                _invalidSubmit = true;
             }
+            // valid name
+            else
+            {
+                // ensuring no duplicate rooms
+                bool created = false;
+                while (!created)
+                {
+                    string roomCode = CreateRandomRoomCode();
 
-            // add room to list of rooms
-            playInfoContainer.SetValue(_playInfo);
-            roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
-            navigationManager.NavigateTo("/lobby");
+                    if (!roomsService.ContainsRoom(roomCode))
+                    {
+                        _playInfo.RoomCode = roomCode;
+                        created = true;
+                    }
+                }
+
+                // add room to list of rooms
+                playInfoContainer.SetValue(_playInfo);
+                roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
+                navigationManager.NavigateTo("/lobby");
+            }
+            
         }
     }
 
