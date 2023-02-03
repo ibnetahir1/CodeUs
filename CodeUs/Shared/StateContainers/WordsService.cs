@@ -6,7 +6,14 @@ namespace CodeUs.Shared.StateContainers
 {
     public class WordsService : IWordsService
     {
+        private readonly IConfiguration _configuration;
+
         public List<Word> Words { get; set; } = new();
+
+        public WordsService(IConfiguration configuration) 
+        {
+            _configuration = configuration;
+        }
 
         /// <summary>
         /// Gets 30 random words from the specified pack
@@ -20,7 +27,7 @@ namespace CodeUs.Shared.StateContainers
             switch (wordPack)
             {
                 case "Default":
-                    filePath = "Packs/Default.txt";
+                    filePath = _configuration.GetValue<string>("Packs:Default")!;
                     break;
             }
 

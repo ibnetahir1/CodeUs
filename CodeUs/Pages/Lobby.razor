@@ -6,6 +6,8 @@
 @inject Shared.StateContainers.PlayInfoContainer playInfoContainer
 @inject Shared.StateContainers.IRoomsService roomsService
 @inject Shared.StateContainers.IWordsService wordsService
+@*@inject ILoggerFactory loggerFactory*@
+@inject ILogger<Lobby> logger
 
 <h1>current user: @_currentUserName</h1>
 <h1>room code: @_currentRoomCode</h1>
@@ -58,12 +60,14 @@
                 </InputRadioGroup>
             </div>
         
-            <button type="submit" disabled=@_isStartDisabled>Start</button>
+            <button type="submit" disabled="@_isStartDisabled">Start</button>
         </EditForm>
     </div>
 </div>
 
 @code {
+    //private ILogger? logger;
+
     private string? _currentUserName = "";
     private string? _currentRoomCode = "";
     private Player? _currentPlayer;
@@ -80,6 +84,8 @@
 
     protected override void OnInitialized()
     {
+        //logger = loggerFactory.CreateLogger("LobbyLogger");
+        logger.LogInformation("Reached the lobby");
         _currentUserName = playInfoContainer?.Value?.Nickname;
         _currentRoomCode = playInfoContainer?.Value?.RoomCode;
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
@@ -150,6 +156,7 @@
     /// <returns></returns>
     private async Task ToggleReady()
     {
+        logger?.LogInformation($"Toggling ready for {_currentUserName}");
         await HubConnection!.SendAsync("ToggleReady", _currentUserName, _currentRoomCode);
     }
 
@@ -165,6 +172,7 @@
         }
         else
         {
+            logger?.LogDebug("Sending GameStart request to the hub");
             await HubConnection!.SendAsync("GameStart", _gameSettings, _currentRoomCode, null);
         }
     }
@@ -176,6 +184,7 @@
     /// <returns></returns>
     private void GameStart(List<Word> wordList)
     {
+        logger?.LogInformation("Hub is trying to redirect to the game");
         wordsService.Words = wordList;
         navigationManager.NavigateTo("/game");
     }

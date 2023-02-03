@@ -7,7 +7,7 @@ namespace CodeUs.Hubs
 {
     public class GameHub : Hub
     {
-        public const string HubUrl = "/game";
+        public const string HubUrl = "/gamehub";
 
         private IRoomsService _roomsService;
         private IWordsService _wordsService;
