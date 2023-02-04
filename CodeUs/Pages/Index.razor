@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using CodeUs.Shared.Models;
+@using Microsoft.AspNetCore.SignalR.Client;
 @inject NavigationManager navigationManager
 @inject Shared.StateContainers.PlayInfoContainer playInfoContainer
 @inject Shared.StateContainers.IRoomsService roomsService
@@ -25,7 +26,7 @@
 
                         <div class="pf-input-group">
                             <label class="nickname-input">
-                                <InputText required @bind-Value="_playInfo.Nickname" />
+                                <InputText required maxlength="12" @bind-Value="_playInfo.Nickname" />
                                 <span class="nickname-label">Nickname</span>
                             </label>
                         </div>
@@ -34,13 +35,13 @@
                         {
                             <div class="pf-input-group">
                                 <label class="room-code-input">
-                                    <InputText required @bind-Value="_playInfo.RoomCode" />
+                                    <InputText required maxlength="5" @bind-Value="_playInfo.RoomCode" />
                                     <span class="room-code-label">Room Code</span>
                                 </label>
                             </div>
                         }
 
-                        <button type="submit">Play</button>
+                        <button class="play-button" role="button" type="submit">Play</button>
                     </EditForm>
 
                     @if (_invalidSubmit)
@@ -64,8 +65,12 @@
 
     private PlayInfo _playInfo = new();
 
+    [Inject]
+    private HubConnection? HubConnection { get; set; }
+
     protected override void OnInitialized()
     {
+        HubConnection!.StopAsync();
         playInfoContainer.OnStateChange += StateHasChanged;
     }
 
@@ -90,7 +95,7 @@
             if (roomsService.ContainsRoom(_playInfo.RoomCode) && _playInfo.Nickname != "SkipVote" && roomsService.GetRoom(_playInfo.RoomCode)!.Players.FirstOrDefault(x => x.Name == _playInfo.Nickname) == null)
             {
                 playInfoContainer.SetValue(_playInfo);
-                roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
+                //roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
                 navigationManager.NavigateTo("/lobby");
             }
             // invalid room code
@@ -133,7 +138,7 @@
 
                 // add room to list of rooms
                 playInfoContainer.SetValue(_playInfo);
-                roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
+                //roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
                 navigationManager.NavigateTo("/lobby");
             }
             

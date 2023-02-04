@@ -15,7 +15,6 @@
     <div class="voting-modal @_modalDisplay">
         <div class="voting-modal-content">
             <h2>@_playerThatCalledMeeting?.Name called the meeting.</h2>
-            <div class="close" @onclick="CloseModal">&times;</div>
             <div class="player-list-meeting">
                 @foreach (var player in _players!)
                 {
@@ -71,8 +70,8 @@
                                 }
                             </div>
                             <div class="check-container @_playerVotingClasses[player.Name]" @onclick="@(() => {
-                                                                                            _playerVotingClasses[player.Name] = "dont-show-voting-items";
-                                                                                            InvokeAsync(StateHasChanged);
+                                                                                            //_playerVotingClasses[player.Name] = "dont-show-voting-items";
+                                                                                            //InvokeAsync(StateHasChanged);
                                                                                             SendVote(_currentUserName!, player);
                                                                                             })">
                                 <div class="vote-check"></div>
@@ -83,7 +82,7 @@
                 }
             </div>
             <div>
-                <button class="skip-vote-button" @onclick="@(() => SendVote(_currentUserName!, new Player(){Name = "SkipVote"}))">Skip Vote</button>
+                <button class="skip-vote-button" disabled="@_skipVoteDisabled" @onclick="@(() => SendVote(_currentUserName!, new Player(){Name = "SkipVote"}))">Skip Vote</button>
                 <span class="@_votesDisplay">
                     <b>Votes:</b>
                     @{
@@ -108,10 +107,8 @@
             <ul class="no-bullets">
                 @foreach (var player in _players!)
                 {
-                    string faction = GetFaction(player);
-                
                     <li>
-                        @player.Name: @faction @player.IsGuesser
+                        @player.Name: @player.IsGuesser
                     </li>
                 }
             </ul>
@@ -215,7 +212,7 @@
                         <DataAnnotationsValidator />
                         <ValidationSummary />
 
-                        <InputText placeholder="Enter a clue" @bind-Value="_clue.Hint"></InputText>
+                        <InputText placeholder="Enter a clue" maxlength="12" @bind-Value="_clue.Hint"></InputText>
                         <InputSelect @bind-Value="_clue.NumberOfWords">
                             @for (int i = 0; i < 10; i++)
                             {
@@ -246,20 +243,6 @@
         }
     }
 
-
-
-    @*<div>
-        @if(_currentTurnPlayer != null){
-            <p>It is @_currentTurnPlayer!.Name's turn the clue is @_clue.Hint @_clue.NumberOfWords. Guesses left: @_clue.GuessesLeft</p>
-        }
-    </div>
-    <div>
-        @_guesser?.Name guessed @_lastWordGuessed?.Value
-    </div>
-    <div>
-        Turns Left: @_turnsLeft
-    </div>*@
-
 </div>
 
 @code {
@@ -284,6 +267,7 @@
     private Word? _lastWordGuessed;
     private bool _gameOver = false;
     private bool _meetingDisabled = false;
+    private bool _skipVoteDisabled = false;
     private int _turnsLeft = 0;
 
     [Inject]
@@ -295,6 +279,7 @@
         _currentRoomCode = playInfoContainer?.Value?.RoomCode;
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
         _guesser = _players!.FirstOrDefault(x => x.IsGuesser == true);
+        _turnsLeft = roomsService.GetRoom(_currentRoomCode!)!.TurnsLeft;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -309,7 +294,6 @@
         }
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
         _clue = roomsService.GetRoom(_currentRoomCode!)!.Clue;
-        _turnsLeft = roomsService.GetRoom(_currentRoomCode!)!.TurnsLeft;
     }
 
     private void RegisterEvents()
@@ -350,9 +334,10 @@
     /// from the hub
     /// </summary>
     /// <returns></returns>
-    private async Task NextTurnAfterClue()
+    private void NextTurnAfterClue()
     {
-        await UpdateGameState();
+        InvokeAsync(StateHasChanged);
+        UpdateGameState();
     }
 
     /// <summary>
@@ -388,9 +373,10 @@
     /// from the hub
     /// </summary>
     /// <returns></returns>
-    private async Task NextTurnAfterGuesser()
+    private void NextTurnAfterGuesser()
     {
-        await UpdateGameState();
+        _turnsLeft = roomsService.GetRoom(_currentRoomCode!)!.TurnsLeft;
+        UpdateGameState();
     }
 
     /// <summary>
@@ -497,11 +483,12 @@
     private void ContinueGameAfterVoting()
     {
         _votesDisplay = "votes-not-display";
+        _skipVoteDisabled = false;
         CloseModal();
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task UpdateGameState()
+    private void UpdateGameState()
     {
         _currentTurnPlayer = roomsService.GetCurrentTurnPlayer(_currentRoomCode!);
 
@@ -521,7 +508,7 @@
         {
             _gameState = $"Waiting for {_currentTurnPlayer.Name} to give a clue";
         }
-        await InvokeAsync(StateHasChanged); // the problem COULD be the async (unlikely)
+        InvokeAsync(StateHasChanged); // the problem COULD be the async (unlikely)
     }
 
     private async Task ClueGiven()
@@ -543,7 +530,12 @@
     private void CallMeeting()
     {
         _meetingDisabled = true;
-        HubConnection!.SendAsync("CallMeeting", _currentUserName, _currentRoomCode);
+        Player thisPlayer = _players!.FirstOrDefault(x => x.Name == _currentUserName!)!;
+        if (thisPlayer.HasMeeting)
+        {
+            HubConnection!.SendAsync("CallMeeting", _currentUserName, _currentRoomCode);
+        }
+        InvokeAsync(StateHasChanged);
     }
 
     private void CloseModal()
@@ -566,8 +558,13 @@
 
     private void SendVote(string thisUsername, Player playerVoted)
     {
-        _playerVotingClasses[playerVoted.Name] = "dont-show-voting-items";
-        HubConnection!.SendAsync("PlayerVoted", thisUsername, playerVoted.Name, _currentRoomCode);
+        _playerVotingClasses = _playerVotingClasses.ToDictionary(x => x.Key, x => "dont-show-voting-items");
+        _skipVoteDisabled = true;
+        Player thisPlayer = _players!.FirstOrDefault(x => x.Name == _currentUserName!)!;
+        if (!thisPlayer.HasVoted)
+        {
+            HubConnection!.SendAsync("PlayerVoted", thisUsername, playerVoted.Name, _currentRoomCode);
+        }
         InvokeAsync(StateHasChanged);
     }
 

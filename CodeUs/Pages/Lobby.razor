@@ -6,7 +6,6 @@
 @inject Shared.StateContainers.PlayInfoContainer playInfoContainer
 @inject Shared.StateContainers.IRoomsService roomsService
 @inject Shared.StateContainers.IWordsService wordsService
-@*@inject ILoggerFactory loggerFactory*@
 @inject ILogger<Lobby> logger
 
 <h1>current user: @_currentUserName</h1>
@@ -16,6 +15,7 @@
     <div class="player-list">
         @if(_players != null)
         {
+            Player? currentPlayer = roomsService.GetPlayer(_currentUserName!, _currentRoomCode!);
             <ul class="no-bullets">
                 @foreach (var player in _players)
                 {
@@ -28,7 +28,18 @@
                     {
                         className = "not-ready";
                     }
-                    <li>
+
+                    string removeDisabled = "";
+                    if (currentPlayer != null && currentPlayer.IsHost)
+                    {
+                        removeDisabled = "remove-not-disabled";
+                    }
+                    else
+                    {
+                        removeDisabled = "remove-disabled";
+                    }
+
+                    <li class="@removeDisabled" @onclick="@(() => RemovePlayer(player.Name))">
                         @player.Name
                         <span class="@className"></span>
                     </li>
@@ -66,11 +77,8 @@
 </div>
 
 @code {
-    //private ILogger? logger;
-
     private string? _currentUserName = "";
     private string? _currentRoomCode = "";
-    private Player? _currentPlayer;
 
     private List<Player>? _players = new();
 
@@ -84,12 +92,10 @@
 
     protected override void OnInitialized()
     {
-        //logger = loggerFactory.CreateLogger("LobbyLogger");
         logger.LogInformation("Reached the lobby");
         _currentUserName = playInfoContainer?.Value?.Nickname;
         _currentRoomCode = playInfoContainer?.Value?.RoomCode;
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
-        _currentPlayer = roomsService.GetRoom(_currentRoomCode!)!.GetPlayer(_currentUserName!);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -98,7 +104,6 @@
         {
             await EnterRoom();
         }
-        _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
     }
 
     /// <summary>
@@ -112,6 +117,8 @@
             HubConnection!.On<Player>("Update", Update);
 
             HubConnection!.On<List<Word>>("GameStart", GameStart);
+
+            HubConnection!.On<Player>("PlayerRemoved", PlayerRemoved);
 
             if(HubConnection!.State == HubConnectionState.Disconnected)
             {
@@ -128,25 +135,55 @@
     }
 
     /// <summary>
+    /// Tells the hub to remove this player from the lobby
+    /// </summary>
+    /// <param name="playerName"></param>
+    /// <returns></returns>
+    public async Task RemovePlayer(string playerName)
+    {
+        Player currentPlayer = roomsService.GetPlayer(_currentUserName!, _currentRoomCode!);
+        if (currentPlayer.IsHost)
+        {
+            await HubConnection!.SendAsync("RemovePlayer", playerName, _currentRoomCode);
+        }
+    }
+
+    /// <summary>
     /// Updates the state of the lobby after the hub makes a change
     /// </summary>
     /// <param name="player"></param>
     /// <returns></returns>
     private async Task Update(Player player)
     {
-        await InvokeAsync(StateHasChanged);
+        _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
+        Player currentPlayer = roomsService.GetPlayer(_currentUserName!, _currentRoomCode!);
 
         bool allPlayersReady = _players!.All(x => x.IsReady);
 
-        if (_currentPlayer!.IsHost && _players!.Count > 2 && allPlayersReady)
-        {
+        if (currentPlayer != null && currentPlayer.IsHost && _players!.Count > 2 && allPlayersReady)
+    {
             _isStartDisabled = false;
-            await InvokeAsync(StateHasChanged);
         }
         else
         {
             _isStartDisabled = true;
-            await InvokeAsync(StateHasChanged);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Updates the state of the lobby after player is removed and sends the removed player
+    /// back to the lobby
+    /// </summary>
+    /// <param name="player"></param>
+    /// <returns></returns>
+    private async Task PlayerRemoved(Player player)
+    {
+        await Update(player);
+
+        if (player.Name == _currentUserName)
+        {
+            navigationManager.NavigateTo("/");
         }
     }
 

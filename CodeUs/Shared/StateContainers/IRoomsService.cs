@@ -8,7 +8,11 @@ namespace CodeUs.Shared.StateContainers
 
         public bool ContainsRoom(string roomCode);
 
-        public Player AddPlayerToRoom(string roomCode, string playerName);
+        public Player AddPlayerToRoom(string playerName, string connectionId, string roomCode);
+
+        public Player RemovePlayerFromRoom(string playerName, string roomCode);
+
+        public (Player? player, string? roomCode) RemovePlayerWithId(string connectionId);
 
         public Room? GetRoom(string roomCode);
 

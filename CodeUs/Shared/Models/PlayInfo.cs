@@ -1,4 +1,6 @@
-﻿namespace CodeUs.Shared.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace CodeUs.Shared.Models
 {
     public class PlayInfo
     {

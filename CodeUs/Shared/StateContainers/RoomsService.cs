@@ -18,12 +18,13 @@ namespace CodeUs.Shared.StateContainers
             return false;
         }
 
-        public Player AddPlayerToRoom(string roomCode, string playerName)
+        public Player AddPlayerToRoom(string playerName, string connectionId, string roomCode)
         {
             Room? room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode);
 
             Player player = new();
             player.Name = playerName;
+            player.ConnectionId = connectionId;
 
             if (room == null)
             {
@@ -36,6 +37,21 @@ namespace CodeUs.Shared.StateContainers
             Rooms.Add(room);
 
             return player;
+        }
+
+        public Player RemovePlayerFromRoom(string playerName, string roomCode)
+        {
+            Room room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!;
+
+            return room.RemovePlayer(playerName);
+        }
+
+        public (Player? player, string? roomCode) RemovePlayerWithId(string connectionId)
+        {
+            Room? room = Rooms.FirstOrDefault(x => x.Players.Any(p => p.ConnectionId == connectionId));
+            Player? retPlayer = room?.RemovePlayerWithId(connectionId);
+
+            return (retPlayer, room?.RoomCode);
         }
 
         public Room? GetRoom(string roomCode)
@@ -115,7 +131,7 @@ namespace CodeUs.Shared.StateContainers
             Room room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!;
 
             room.Clue = clue;
-            room.Clue.GuessesLeft = room.Clue.NumberOfWords;
+            room.Clue.GuessesLeft = room.Clue.NumberOfWords + 1; // give extra guess
         }
 
         public void DecrementGuessesLeft(string roomCode)

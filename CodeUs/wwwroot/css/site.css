@@ -76,6 +76,7 @@ article {
     position: sticky;
     top: 0;
     z-index: 1;
+    height: 5vh;
 }
 
 .show-navbar {
@@ -84,7 +85,11 @@ article {
 
 .navbar {
     background-color: darkslateblue;
+    height: 95vh;
+    display: block;
 }
+
+
 
 /* host button */
 .host-button, .join-button{
@@ -135,28 +140,56 @@ article {
     }
 
 .host-button {
-    margin-left: 30%;
+    margin-left: 32%;
 }
 
-/** BEGIN: Non Openmrs CSS **/
-/*@import url("https://fonts.googleapis.com/css?family=Roboto&display=swap");
-
-* {
-    font-family: "Roboto";
-}*/
-
-:root {
-    --omrs-color-ink-lowest-contrast: rgba(47, 60, 85, 0.18);
-    --omrs-color-ink-low-contrast: rgba(60, 60, 67, 0.3);
-    --omrs-color-ink-medium-contrast: rgba(19, 19, 21, 0.6);
-    --omrs-color-interaction: #1e4bd1;
-    --omrs-color-interaction-minus-two: rgba(73, 133, 224, 0.12);
-    --omrs-color-danger: #b50706;
-    --omrs-color-bg-low-contrast: #eff1f2;
-    --omrs-color-ink-high-contrast: #121212;
-    --omrs-color-bg-high-contrast: #ffffff;
+.play-button {
+    align-items: center;
+    appearance: none;
+    background-color: #3EB2FD;
+    background-image: linear-gradient(1deg, #4F58FD, #149BF3 99%);
+    background-size: calc(100% + 20px) calc(100% + 20px);
+    border-radius: 100px;
+    border-width: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: CircularStd,sans-serif;
+    font-size: 1rem;
+    height: auto;
+    justify-content: center;
+    line-height: 1.5;
+    padding: 6px 20px;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color .2s,background-position .2s;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    vertical-align: top;
+    white-space: nowrap;
+    margin: 3vh 0 0 40%;
 }
-/** END: Non Openmrs CSS **/
+
+    .play-button:active,
+    .play-button:focus,
+    .ready-button:active,
+    .ready-button:focus {
+        outline: none;
+    }
+
+    .play-button:hover,
+    .ready-button:hover {
+        background-position: -20px -20px;
+    }
+
+    .play-button:focus:not(:active),
+    .ready-button:focus:not(:active) {
+        box-shadow: rgba(40, 170, 255, 0.25) 0 0 0 .125em;
+    }
 
 .play-form {
     margin-top: 20px;
@@ -226,13 +259,13 @@ div.pf-input-group {
 
 .players-and-settings-container {
     display: flex;
+    justify-content: space-around;
     align-items: flex-start;
 }
 
 .player-list {
-    border-style: solid;
-    flex: 1;
-    margin-right: 40%;
+    width: 25vw;
+    box-shadow: rgb(0 0 0 / 35%) 0px 5px 15px;
 }
 
 ul.no-bullets {
@@ -257,11 +290,39 @@ ul.no-bullets {
     margin-bottom: 5px;
 }
 
+.ready-button {
+    align-items: center;
+    appearance: none;
+    background-color: #3EB2FD;
+    background-image: linear-gradient(1deg, #4F58FD, #149BF3 99%);
+    background-size: calc(100% + 20px) calc(100% + 20px);
+    border-radius: 100px;
+    border-width: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: CircularStd,sans-serif;
+    font-size: 1rem;
+    height: auto;
+    justify-content: center;
+    line-height: 1.5;
+    padding: 6px 20px;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color .2s,background-position .2s;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
 .game-settings {
-    border-style: solid;
-    width: 300px;
-    flex: 1;
-    margin-right: 10%;
+    width: 25vw;
+    box-shadow: rgb(0 0 0 / 35%) 0px 5px 15px;
 }
 
 .pack-radio {
@@ -357,7 +418,7 @@ ul.no-bullets {
 }
 
 /* The Close Button */
-.close {
+/*.close {
     color: #aaa;
     font-size: 28px;
     font-weight: bold;
@@ -369,7 +430,7 @@ ul.no-bullets {
         color: black;
         text-decoration: none;
         cursor: pointer;
-    }
+    }*/
 
 .modal-display {
     display: block;
@@ -469,6 +530,6 @@ ul.no-bullets {
 .play-info-container {
     width: 35vw;
     height: 60vh;
-    border-style: solid;
     margin: 15vh 0 0 30%;
+    box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
 }

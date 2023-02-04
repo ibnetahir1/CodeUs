@@ -20,9 +20,16 @@ namespace CodeUs.Hubs
 
         public async Task PlayerJoined(string playerName, string roomCode)
         {
-            Player player = _roomsService.AddPlayerToRoom(playerName, roomCode);
+            Player player = _roomsService.AddPlayerToRoom(playerName, Context.ConnectionId, roomCode);
             await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
             await Clients.Group(roomCode).SendAsync("Update", player);
+        }
+
+        public async Task RemovePlayer(string playerName, string roomCode)
+        {
+            Player player = _roomsService.RemovePlayerFromRoom(playerName, roomCode);
+            await Clients.Group(roomCode).SendAsync("PlayerRemoved", player);
+            await Groups.RemoveFromGroupAsync(player.ConnectionId, roomCode);
         }
 
         public async Task ToggleReady(string playerName, string roomCode)
@@ -55,7 +62,6 @@ namespace CodeUs.Hubs
 
         public async Task ClueGiven(Clue? clue, string playerName, string roomCode)
         {
-            //Player? player = null;
             if (clue != null)
             {
                 _roomsService.SetClue(clue, roomCode);
@@ -160,6 +166,13 @@ namespace CodeUs.Hubs
 
         public override async Task OnDisconnectedAsync(Exception? e)
         {
+            (Player? player, string? roomCode) = _roomsService.RemovePlayerWithId(Context.ConnectionId);
+
+            if (player != null && roomCode != null)
+            {
+                await Clients.Group(roomCode).SendAsync("PlayerRemoved", player);
+            }
+
             Console.WriteLine($"Disconnected {e?.Message} {Context.ConnectionId}");
             await base.OnDisconnectedAsync(e);
         }

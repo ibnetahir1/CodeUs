@@ -19,6 +19,22 @@
             Players.Add(player);
         }
 
+        public Player RemovePlayer(string playerName)
+        {
+            Player player = Players.FirstOrDefault(p => p.Name == playerName)!;
+            Players.RemoveAll(p => p.Name == playerName);
+
+            return player;
+        }
+
+        public Player? RemovePlayerWithId(string connectionId)
+        {
+            Player? player = Players.FirstOrDefault(p => p.ConnectionId == connectionId);
+            Players.RemoveAll(p => p.ConnectionId == connectionId);
+
+            return player;
+        }
+
         public Player? GetPlayer(string name)
         {
             return Players.FirstOrDefault(x => x.Name == name);

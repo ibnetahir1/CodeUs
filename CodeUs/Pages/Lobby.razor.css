@@ -1,0 +1,7 @@
+﻿.remove-not-disabled {
+    cursor: pointer;
+}
+
+.remove-disabled {
+    pointer-events: none;
+}

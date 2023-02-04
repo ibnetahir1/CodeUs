@@ -2,6 +2,7 @@
 {
     public class Player
     {
+        public string ConnectionId { get; set; } = "";
         public string Name { get; set; } = "";
         public bool IsHost { get; set; } = false;
         public bool IsReady { get; set; } = false;
