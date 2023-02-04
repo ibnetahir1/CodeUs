@@ -1,7 +1,79 @@
-﻿.remove-not-disabled {
+﻿.players-and-settings-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+}
+
+.player-list {
+    width: 25vw;
+    box-shadow: rgb(0 0 0 / 35%) 0px 5px 15px;
+}
+
+ul.no-bullets {
+    list-style-type: none;
+    padding: 5px;
+}
+
+.remove-not-disabled {
     cursor: pointer;
 }
 
 .remove-disabled {
     pointer-events: none;
+}
+
+.ready, .not-ready {
+    height: 25px;
+    width: 25px;
+    background-color: green;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.not-ready {
+    background-color: red;
+}
+
+.ready-button-container {
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.ready-button {
+    align-items: center;
+    appearance: none;
+    background-color: #3EB2FD;
+    background-image: linear-gradient(1deg, #4F58FD, #149BF3 99%);
+    background-size: calc(100% + 20px) calc(100% + 20px);
+    border-radius: 100px;
+    border-width: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: CircularStd,sans-serif;
+    font-size: 1rem;
+    height: auto;
+    justify-content: center;
+    line-height: 1.5;
+    padding: 6px 20px;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color .2s,background-position .2s;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.game-settings {
+    width: 25vw;
+    box-shadow: rgb(0 0 0 / 35%) 0px 5px 15px;
+}
+
+.pack-radio {
+    display: block;
 }

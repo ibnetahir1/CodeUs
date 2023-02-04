@@ -1,0 +1,176 @@
+﻿.show-navbar {
+    display: flex;
+}
+
+.play-info-container {
+    width: 35vw;
+    height: 60vh;
+    margin: 15vh 0 0 30%;
+    box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
+}
+
+/* host button */
+.host-button, .join-button {
+    align-items: center;
+    appearance: none;
+    background-color: lightyellow;
+    border-radius: 4px;
+    border-width: 0;
+    box-shadow: rgba(45, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, 0.3) 0 7px 13px -3px,#D6D6E7 0 -3px 0 inset;
+    box-sizing: border-box;
+    color: #36395A;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: "JetBrains Mono",monospace;
+    height: 48px;
+    justify-content: center;
+    line-height: 1;
+    list-style: none;
+    overflow: hidden;
+    padding-left: 16px;
+    padding-right: 16px;
+    position: relative;
+    text-align: left;
+    text-decoration: none;
+    transition: box-shadow .15s,transform .15s;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    white-space: nowrap;
+    will-change: box-shadow,transform;
+    font-size: 18px;
+}
+
+    .host-button:not(.selected):hover, .join-button:not(.selected):hover {
+        box-shadow: rgba(45, 35, 66, 0.4) 0 4px 8px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset;
+        /*transform: translateY(-2px);*/
+    }
+
+    .host-button:active, .join-button:active {
+        box-shadow: #D6D6E7 0 3px 7px inset;
+        transform: translateY(2px);
+    }
+
+    .host-button.selected, .join-button.selected {
+        background-color: #FCFCFD;
+        box-shadow: #D6D6E7 0 3px 7px inset;
+        transform: translateY(2px);
+    }
+
+.host-button {
+    margin-left: 32%;
+}
+
+.play-button {
+    align-items: center;
+    appearance: none;
+    background-color: #3EB2FD;
+    background-image: linear-gradient(1deg, #4F58FD, #149BF3 99%);
+    background-size: calc(100% + 20px) calc(100% + 20px);
+    border-radius: 100px;
+    border-width: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: CircularStd,sans-serif;
+    font-size: 1rem;
+    height: auto;
+    justify-content: center;
+    line-height: 1.5;
+    padding: 6px 20px;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color .2s,background-position .2s;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    vertical-align: top;
+    white-space: nowrap;
+    margin: 3vh 0 0 40%;
+}
+
+    .play-button:active,
+    .play-button:focus,
+    .ready-button:active,
+    .ready-button:focus {
+        outline: none;
+    }
+
+    .play-button:hover,
+    .ready-button:hover {
+        background-position: -20px -20px;
+    }
+
+    .play-button:focus:not(:active),
+    .ready-button:focus:not(:active) {
+        box-shadow: rgba(40, 170, 255, 0.25) 0 0 0 .125em;
+    }
+
+.play-form {
+    margin-top: 20px;
+}
+
+div.pf-input-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+    width: 80%;
+    margin-left: 10%;
+}
+
+/* Input*/
+::deep .nickname-input, .room-code-input {
+    width: 100%;
+}
+
+    ::deep .nickname-input > input,
+    ::deep .room-code-input > input {
+        border: none;
+        border-bottom: 0.125rem solid rgba(19, 19, 21, 0.6);
+        width: 100%;
+        height: 3.5rem;
+        font-size: 1.0625rem;
+        padding-left: 0.875rem;
+        line-height: 147.6%;
+        padding-top: 0.825rem;
+        padding-bottom: 0.5rem;
+        background: #eff1f2;
+    }
+
+        ::deep .nickname-input > input:focus,
+        ::deep .room-code-input > input:focus {
+            outline: none;
+            border-color: #1e4bd1;
+        }
+
+    ::deep .nickname-input > .nickname-label,
+    ::deep .room-code-input > .room-code-label {
+        position: absolute;
+        top: 0.9375rem;
+        left: 0.875rem;
+        line-height: 147.6%;
+        color: rgba(19, 19, 21, 0.6);
+        transition: top .2s;
+    }
+
+    ::deep .nickname-input > input:hover,
+    ::deep .room-code-input > input:hover {
+        background: rgba(73, 133, 224, 0.12);
+        border-color: #121212;
+    }
+
+    ::deep .nickname-input > input:focus + .nickname-label,
+    ::deep .nickname-input > input:valid + .nickname-label,
+    ::deep .room-code-input > input:focus + .room-code-label,
+    ::deep .room-code-input > input:valid + .room-code-label {
+        top: 0;
+        font-size: 0.9375rem;
+        margin-bottom: 32px;
+        color: #1e4bd1;
+    }
+
+.invalid-room-code {
+    color: red;
+}

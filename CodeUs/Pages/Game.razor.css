@@ -1,0 +1,187 @@
+﻿.agents-win-color {
+    background-color: lightgreen;
+}
+
+.spy-wins-color {
+    background-color: gray;
+}
+
+.game-state-message {
+    text-align: center;
+}
+
+.player-and-words-container {
+    display: flex;
+}
+
+.player-list-game {
+    border-style: solid;
+    flex: 0.15;
+    margin: 2% 2% 2% 0;
+}
+
+ul.no-bullets {
+    list-style-type: none;
+    padding: 5px;
+}
+
+.word-container {
+    flex: 1;
+    columns: 6;
+    padding: 2%;
+}
+
+.word {
+    text-align: center;
+    height: 13vh;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    border-style: solid;
+    margin-bottom: 10px;
+}
+
+.word-agent {
+    background-color: aqua;
+}
+
+.word-neutral {
+    background-color: crimson;
+}
+
+.word-spy {
+    background-color: black;
+    color: white;
+}
+
+.guesser-clickable {
+    cursor: pointer;
+}
+
+.not-clickable {
+    pointer-events: none;
+}
+
+.word-guessed {
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.hide-faction-from-agents {
+    background-color: antiquewhite;
+    color: black;
+}
+
+.hide-faction-for-guesser {
+    background-color: antiquewhite;
+    color: black;
+}
+
+.voting-modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content/Box */
+.voting-modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
+}
+
+.modal-display {
+    display: block;
+}
+
+.modal-not-display {
+    display: none;
+}
+
+.player-flex {
+    display: flex;
+    margin-bottom: 10px;
+    border-style: solid;
+}
+
+.player-name-flex {
+    flex: 1;
+    cursor: pointer;
+}
+
+.check-container {
+    flex: 0.02;
+    background-color: lightgreen;
+    padding-left: 10px;
+    margin-right: 8px;
+}
+
+    .check-container:hover {
+        cursor: pointer;
+    }
+
+.vote-check {
+    display: inline-block;
+    transform: rotate(45deg);
+    height: 14px;
+    width: 7px;
+    border-bottom: 5px solid #78b13f;
+    border-right: 5px solid #78b13f;
+}
+
+.vote-cross {
+    flex: 0.02;
+    color: red;
+    font-size: 16px;
+    background-color: bisque;
+    padding-left: 5px;
+}
+
+    .vote-cross:hover {
+        cursor: pointer;
+    }
+
+    .vote-cross:after {
+        display: inline-block;
+        content: "\00d7"; /* This will render the 'X' */
+    }
+
+.dont-show-voting-items {
+    display: none;
+}
+
+.player-voted {
+    height: 15px;
+    width: 15px;
+    background-color: green;
+    border-radius: 50%;
+    display: inline-block;
+    margin-top: 5px;
+    margin-right: 5px;
+}
+
+.player-not-voted {
+    display: none;
+}
+
+.disable-voting {
+    pointer-events: none;
+    cursor: default;
+}
+
+.votes-not-display {
+    display: none;
+}
+
+.votes-display {
+    flex: 1;
+}

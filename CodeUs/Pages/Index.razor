@@ -24,23 +24,24 @@
                         <DataAnnotationsValidator />
                         <ValidationSummary />
 
-                        <div class="pf-input-group">
-                            <label class="nickname-input">
-                                <InputText required maxlength="12" @bind-Value="_playInfo.Nickname" />
-                                <span class="nickname-label">Nickname</span>
-                            </label>
-                        </div>
-
-                        @if (_joinButtonSelected == "selected")
-                        {
+                        <span>
                             <div class="pf-input-group">
-                                <label class="room-code-input">
-                                    <InputText required maxlength="5" @bind-Value="_playInfo.RoomCode" />
-                                    <span class="room-code-label">Room Code</span>
+                                <label class="nickname-input">
+                                    <InputText required maxlength="12" @bind-Value="_playInfo.Nickname" />
+                                    <span class="nickname-label">Nickname</span>
                                 </label>
                             </div>
-                        }
 
+                            @if (_joinButtonSelected == "selected")
+                            {
+                                <div class="pf-input-group">
+                                    <label class="room-code-input">
+                                        <InputText required maxlength="5" @bind-Value="_playInfo.RoomCode" />
+                                        <span class="room-code-label">Room Code</span>
+                                    </label>
+                                </div>
+                            }
+                        </span>
                         <button class="play-button" role="button" type="submit">Play</button>
                     </EditForm>
 
