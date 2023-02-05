@@ -22,6 +22,8 @@ namespace CodeUs.Shared.StateContainers
 
         public void RandomlyAssignRoles(string roomCode);
 
+        public void SetTotalTurns(int turns, string roomCode);
+
         public void SetNextTurn(string roomCode);
 
         public Player GetCurrentTurnPlayer(string roomCode);

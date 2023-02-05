@@ -70,6 +70,30 @@
                     </label>
                 </InputRadioGroup>
             </div>
+
+            <div>
+                <label>Number of words</label>
+                <InputSelect @bind-Value="_gameSettings.NumberOfWords">
+                    <option value="25">25</option>
+                    <option value="30">30</option>
+                    <option value="35">35</option>
+                    <option value="40">40</option>
+                </InputSelect>
+
+                <br />
+
+                <label>Number of turns</label>
+                <InputSelect @bind-Value="_gameSettings.NumberOfTurns">
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                </InputSelect>
+            </div>
         
             <button type="submit" disabled="@_isStartDisabled">Start</button>
         </EditForm>
@@ -209,7 +233,7 @@
         }
         else
         {
-            logger?.LogDebug("Sending GameStart request to the hub");
+            logger?.LogInformation("Sending GameStart request to the hub");
             await HubConnection!.SendAsync("GameStart", _gameSettings, _currentRoomCode, null);
         }
     }

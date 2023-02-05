@@ -27,7 +27,6 @@ ul.no-bullets {
 
 .word-container {
     flex: 1;
-    columns: 6;
     padding: 2%;
 }
 

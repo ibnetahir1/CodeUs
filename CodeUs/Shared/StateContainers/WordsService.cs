@@ -19,14 +19,14 @@ namespace CodeUs.Shared.StateContainers
         /// Gets 30 random words from the specified pack
         /// </summary>
         /// <returns></returns>
-        public List<Word> GetWordListFromPack(string wordPack)
+        public List<Word> GetWordListFromPack(GameSettings gameSettings)
         {
             Random rng = new();
 
             string filePath = "";
-            switch (wordPack)
+            switch (gameSettings.Pack)
             {
-                case "Default":
+                case Packs.Default:
                     filePath = _configuration.GetValue<string>("Packs:Default")!;
                     break;
             }
@@ -36,11 +36,11 @@ namespace CodeUs.Shared.StateContainers
             // get all lines
             var lines = File.ReadLines(filePath);
 
-            int totalWordCount = 30;
+            int totalWordCount = gameSettings.NumberOfWords;
             int totalSpyCount = 2;
             int totalAgentCount = (totalWordCount - totalSpyCount + 2 - 1) / 2; // rounds up
 
-            //populate only 30 words
+            //populate only totalWordCount words
             for (int i = 0; i < totalWordCount; i++)
             {
                 //must be a unique word
@@ -53,12 +53,12 @@ namespace CodeUs.Shared.StateContainers
                     if (!newWordList.Exists(x => x.Value == newWord.Value))
                     {
                         // assign faction
-                        if(totalSpyCount > 0)
+                        if (totalSpyCount > 0)
                         {
                             newWord.Faction = Faction.Spy;
                             totalSpyCount--;
                         }
-                        else if(totalAgentCount > 0)
+                        else if (totalAgentCount > 0)
                         {
                             newWord.Faction = Faction.Agent;
                             totalAgentCount--;

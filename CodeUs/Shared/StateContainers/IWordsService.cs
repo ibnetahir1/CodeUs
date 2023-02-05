@@ -6,7 +6,7 @@ namespace CodeUs.Shared.StateContainers
     {
         List<Word> Words { get; set; }
 
-        List<Word> GetWordListFromPack(string wordPack);
+        List<Word> GetWordListFromPack(GameSettings gameSettings);
 
         List<Word> GetWordListFromCustomList(List<string> customList);
 

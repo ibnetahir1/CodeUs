@@ -46,7 +46,7 @@ namespace CodeUs.Hubs
             switch (gameSettings.Pack)
             {
                 case Packs.Default:
-                    wordList = _wordsService.GetWordListFromPack("Default");
+                    wordList = _wordsService.GetWordListFromPack(gameSettings);
                     break;
                 case Packs.Custom:
                     wordList = _wordsService.GetWordListFromCustomList(customList!);
@@ -55,6 +55,9 @@ namespace CodeUs.Hubs
 
             // randomly assign guesser and factions
             _roomsService.RandomlyAssignRoles(roomCode);
+
+            // set total turns
+            _roomsService.SetTotalTurns(gameSettings.NumberOfTurns, roomCode);
 
             // send all the information to everyone in the room
             await Clients.Group(roomCode).SendAsync("GameStart", wordList);

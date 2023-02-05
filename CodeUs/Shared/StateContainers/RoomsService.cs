@@ -105,6 +105,13 @@ namespace CodeUs.Shared.StateContainers
             room.Players = newPlayerList.OrderBy(x => x.Name).ToList();
         }
 
+        public void SetTotalTurns(int turns, string roomCode)
+        {
+            Room room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!;
+
+            room.TurnsLeft = turns;
+        }
+
         public void SetNextTurn(string roomCode)
         {
             Room room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!;

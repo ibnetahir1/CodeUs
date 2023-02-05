@@ -28,8 +28,8 @@
 
         @if (_currentTurnPlayer != null)
         {
-            <div class="word-container">
-                @foreach (var word in wordsService.Words)
+            <div class="word-container" style="columns: @_columns">
+                @foreach (var word in _words!)
                 {
                     // which faction it belongs to
                     string wordFaction = "";
@@ -260,12 +260,14 @@
     private Player? _playerThatCalledMeeting;
     private Dictionary<string, string> _playerVotingClasses = new();
 
+    private List<Word>? _words;
     private Clue _clue = new();
     private Word? _lastWordGuessed;
     private bool _gameOver = false;
     private bool _meetingDisabled = false;
     private bool _skipVoteDisabled = false;
     private int _turnsLeft = 0;
+    private int _columns;
 
     [Inject]
     private HubConnection? HubConnection { get; set; }
@@ -277,6 +279,8 @@
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
         _guesser = _players!.FirstOrDefault(x => x.IsGuesser == true);
         _turnsLeft = roomsService.GetRoom(_currentRoomCode!)!.TurnsLeft;
+        _words = wordsService.Words;
+        _columns = _words.Count / 5;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -5,7 +5,7 @@
         public string RoomCode { get; set; } = "";
         public List<Player> Players { get; set; } = new();
         public Clue Clue { get; set; } = new();
-        public int TurnsLeft { get; set; } = 8;
+        public int TurnsLeft { get; set; }
 
         /// <summary>
         /// first string is the player's name, and the list is the names of the players voting this player.
