@@ -13,6 +13,8 @@
 
 <div class="players-and-settings-container">
     <div class="player-list">
+        <div class="player-list-header"> Players </div>
+
         @if(_players != null)
         {
             Player? currentPlayer = roomsService.GetPlayer(_currentUserName!, _currentRoomCode!);
@@ -39,9 +41,9 @@
                         removeDisabled = "remove-disabled";
                     }
 
-                    <li class="@removeDisabled" @onclick="@(() => RemovePlayer(player.Name))">
-                        @player.Name
-                        <span class="@className"></span>
+                    <li class="@removeDisabled player-and-ready-container" @onclick="@(() => RemovePlayer(player.Name))">
+                        <span class="@className ready-icon">@player.Name</span>
+                        
                     </li>
                 }
             </ul>
