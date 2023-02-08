@@ -53,6 +53,10 @@ ul.no-bullets {
     color: white;
 }
 
+.word-no-faction {
+    background-color: antiquewhite;
+}
+
 .guesser-clickable {
     cursor: pointer;
 }
@@ -62,17 +66,62 @@ ul.no-bullets {
 }
 
 .word-guessed {
-    pointer-events: none;
     opacity: 0.4;
 }
 
-.hide-faction-from-agents {
-    background-color: antiquewhite;
-    color: black;
+.game-information {
+    margin-right: 1vw;
+    padding-bottom: 20px;
+    height: 77vh;
+    width: 20vw;
+    overflow: auto;
+    box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
+    border: 1px solid;
+    border-radius: 25px;
 }
 
-.hide-faction-for-guesser {
-    background-color: antiquewhite;
+.turns-left{
+    text-align: center;
+    font-weight: bold;
+    border-bottom: solid;
+    margin-bottom: 1vh;
+}
+
+.game-logs{
+    text-align: center;
+    font-weight: bold;
+}
+
+.log{
+    text-align: left;
+    font-weight: normal;
+}
+
+.log-clue {
+    background-color: cadetblue;
+}
+
+.log-guess {
+    background-color: darkgray;
+}
+
+.log-name, .log-info {
+    font-weight: bold;
+}
+
+.log-info-clue {
+    color: cornsilk;
+}
+
+.log-guess-neutral {
+    color: red;
+}
+
+.log-guess-agent {
+    color: aqua;
+}
+
+.log-guess-spy {
     color: black;
 }
 
@@ -103,6 +152,10 @@ ul.no-bullets {
 }
 
 .modal-not-display {
+    display: none;
+}
+
+.modal-content-not-display {
     display: none;
 }
 
@@ -183,4 +236,21 @@ ul.no-bullets {
 
 .votes-display {
     flex: 1;
+}
+
+.action-container {
+    margin: auto;
+    text-align: center;
+}
+
+.clue-form-container {
+    width: 45vw;
+}
+
+.clue-container {
+    width: 10vw;
+}
+
+.return-to-lobby-button-container {
+    width: 15vw;
 }

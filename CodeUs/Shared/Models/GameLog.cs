@@ -2,8 +2,10 @@
 {
     public class GameLog
     {
-        public string Log { get; set; } = "";
+        public string PlayerName { get; set; } = "";
+        public string Info { get; set; } = "";
         public LogType LogType { get; set; }
+        public Faction GuessType { get; set; }
     }
 
     public enum LogType

@@ -20,7 +20,7 @@ namespace CodeUs.Hubs
 
         public async Task PlayerJoined(string playerName, string roomCode)
         {
-            Player player = _roomsService.AddPlayerToRoom(playerName, Context.ConnectionId, roomCode);
+            Player? player = _roomsService.AddPlayerToRoom(playerName, Context.ConnectionId, roomCode);
             await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
             await Clients.Group(roomCode).SendAsync("Update", player);
         }
@@ -69,7 +69,8 @@ namespace CodeUs.Hubs
             {
                 _roomsService.SetClue(clue, roomCode);
                 GameLog log = new GameLog();
-                log.Log = $"{playerName} has given the clue: {clue.Hint} {clue.NumberOfWords}";
+                log.PlayerName = playerName;
+                log.Info = clue.Hint + " " + clue.NumberOfWords;
                 log.LogType = LogType.Clue;
                 _roomsService.AddGameLog(log, roomCode);
             }
@@ -82,8 +83,10 @@ namespace CodeUs.Hubs
             _roomsService.DecrementGuessesLeft(roomCode);
 
             GameLog log = new GameLog();
-            log.Log = $"{playerName} guessed: {word.Value}";
+            log.Info = word.Value;
+            log.PlayerName = playerName;
             log.LogType = LogType.Guess;
+            log.GuessType = word.Faction;
             _roomsService.AddGameLog(log, roomCode);
 
             await Clients.Group(roomCode).SendAsync("NextStepAfterGuess", word);
@@ -93,7 +96,6 @@ namespace CodeUs.Hubs
         {
             if (_roomsService.GetRoom(roomCode)!.TurnsLeft == 0)
             {
-                ResetGameState(roomCode);
                 await Clients.Group(roomCode).SendAsync("TurnLimitReached");
             }
             else
@@ -105,15 +107,11 @@ namespace CodeUs.Hubs
 
         public async Task AllAgentsGuessed(string roomCode)
         {
-            ResetGameState(roomCode);
-
             await Clients.Group(roomCode).SendAsync("GameOverAgentsWin");
         }
 
         public async Task AllSpiesGuessed(string roomCode)
         {
-            ResetGameState(roomCode);
-
             await Clients.Group(roomCode).SendAsync("GameOverSpyWins");
         }
 
@@ -161,6 +159,28 @@ namespace CodeUs.Hubs
             await Clients.Group(roomCode).SendAsync("ContinueGameAfterVoting");
         }
 
+        public async Task ReturnToLobby(string roomCode)
+        {
+            List<Player> players = _roomsService.GetPlayers(roomCode);
+            foreach (Player player in players)
+            {
+                player.IsGuesser = false;
+                player.IsTurn = false;
+                player.WasLastTurn = false;
+                player.IsReady = false;
+                player.HasMeeting = true;
+                player.HasVoted = false;
+            }
+
+            Room room = _roomsService.GetRoom(roomCode)!;
+            room.Clue = new();
+            room.Votes = new();
+            room.GameLogs = new();
+            room.TurnsLeft = 8;
+
+            await Clients.Group(roomCode).SendAsync("NavigateToLobby");
+        }
+
         public override Task OnConnectedAsync()
         {
             Console.WriteLine($"{Context.ConnectionId} connected");
@@ -178,25 +198,6 @@ namespace CodeUs.Hubs
 
             Console.WriteLine($"Disconnected {e?.Message} {Context.ConnectionId}");
             await base.OnDisconnectedAsync(e);
-        }
-
-        private void ResetGameState(string roomCode)
-        {
-            List<Player> players = _roomsService.GetPlayers(roomCode);
-            foreach (Player player in players)
-            {
-                player.IsGuesser = false;
-                player.IsTurn = false;
-                player.WasLastTurn = false;
-                player.IsReady = false;
-                player.HasMeeting = true;
-                player.HasVoted = false;
-            }
-
-            Room room = _roomsService.GetRoom(roomCode)!;
-            room.Clue = new();
-            room.Votes = new();
-            room.TurnsLeft = 8;
         }
     }
 }

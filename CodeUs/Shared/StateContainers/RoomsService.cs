@@ -18,9 +18,14 @@ namespace CodeUs.Shared.StateContainers
             return false;
         }
 
-        public Player AddPlayerToRoom(string playerName, string connectionId, string roomCode)
+        public Player? AddPlayerToRoom(string playerName, string connectionId, string roomCode)
         {
             Room? room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode);
+
+            if(room != null && room.GetPlayer(playerName) != null)
+            {
+                return null;
+            }
 
             Player player = new();
             player.Name = playerName;
@@ -31,10 +36,10 @@ namespace CodeUs.Shared.StateContainers
                 room = new();
                 room.RoomCode = roomCode;
                 player.IsHost = true;
+                Rooms.Add(room);
             }
 
             room.AddPlayer(player);
-            Rooms.Add(room);
 
             return player;
         }

@@ -26,29 +26,14 @@
             <button @onclick="CallMeeting" disabled="@_meetingDisabled">Call Meeting</button>
         </div>
 
-        @if (_currentTurnPlayer != null)
+        @if (_currentTurnPlayer != null && _words != null)
         {
             <div class="word-container" style="columns: @_columns">
-                @foreach (var word in _words!)
+                @foreach (var word in _words)
                 {
-                    // which faction it belongs to
-                    string wordFaction = "";
-                    switch (word.Faction)
-                    {
-                        case Faction.Agent:
-                            wordFaction = "word-agent";
-                            break;
-                        case Faction.Neutral:
-                            wordFaction = "word-neutral";
-                            break;
-                        case Faction.Spy:
-                            wordFaction = "word-spy";
-                            break;
-                    }
-
-                    // only clickable by the guesser when its the guesser's turn
+                    // only clickable by the guesser when its the guesser's turn and not already guessed
                     string clickable = "";
-                    if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser)
+                    if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser && !word.IsGuessed)
                     {
                         clickable = "guesser-clickable";
                     }
@@ -56,8 +41,8 @@
                     {
                         clickable = "not-clickable";
                     }
-
-                    // the guessed words are not guessable
+                    
+                    // the guessed words are transparent
                     string guessed = "";
                     if (word.IsGuessed)
                     {
@@ -68,30 +53,32 @@
                         guessed = "word-not-guessed";
                     }
 
-                    // hide faction color from agents if the word is neutral or spy and is not guessed
-                    string hideSpyWordsFromAgents = "";
+                    string wordFaction = "";
+
+                    // logic for showing faction colors to players
                     Player thisPlayer = roomsService.GetPlayer(_currentUserName!, _currentRoomCode!);
-                    if (thisPlayer.Faction == Faction.Agent && (word.Faction == Faction.Neutral || word.Faction == Faction.Spy) && word.IsGuessed == false)
+                    if (_gameOver || thisPlayer.Faction == Faction.Spy || (!thisPlayer.IsGuesser && word.Faction == Faction.Agent) || word.IsGuessed)
                     {
-                        hideSpyWordsFromAgents = "hide-faction-from-agents";
+                        // which faction it belongs to
+                        switch (word.Faction)
+                        {
+                            case Faction.Agent:
+                                wordFaction = "word-agent";
+                                break;
+                            case Faction.Neutral:
+                                wordFaction = "word-neutral";
+                                break;
+                            case Faction.Spy:
+                                wordFaction = "word-spy";
+                                break;
+                        }
                     }
                     else
                     {
-                        hideSpyWordsFromAgents = "dont-hide-faction-from-agents";
+                        wordFaction = "word-no-faction";
                     }
 
-                    // hide faction color for guesser if the word isnt guessed
-                    string hideFactionForGuesser = "";
-                    if (_guesser?.Name == _currentUserName && word.IsGuessed == false)
-                    {
-                        hideFactionForGuesser = "hide-faction-for-guesser";
-                    }
-                    else
-                    {
-                        hideFactionForGuesser = "dont-hide-faction-for-guesser";
-                    }
-
-                    <div class="word @wordFaction @clickable @guessed @hideSpyWordsFromAgents @hideFactionForGuesser" @onclick="@(() => WordGuessed(word))">@word.Value</div>
+                    <div class="word @wordFaction @guessed @clickable" @onclick="@(() => WordGuessed(word))">@word.Value</div>
                 }
             </div>
         }
@@ -101,16 +88,44 @@
                 Turns Left: @_turnsLeft
             </div>
             <div class="game-logs">
+                Game Logs
                 @foreach(var log in roomsService.GetRoom(_currentRoomCode!)!.GameLogs)
                 {
-                    <div class="log">@log.Log</div>
+                    string logType = "";
+                    string message = "";
+                    string infoType = "";
+                    if (log.LogType == LogType.Clue)
+                    {
+                        logType = "log-clue";
+                        message = "gave clue:";
+                        infoType = "log-info-clue";
+                    }
+                    else
+                    {
+                        logType = "log-guess";
+                        message = "guessed:";
+                        switch (log.GuessType)
+                        {
+                            case Faction.Neutral:
+                                infoType = "log-guess-neutral";
+                                break;
+                            case Faction.Agent:
+                                infoType = "log-guess-agent";
+                                break;
+                            case Faction.Spy:
+                                infoType = "log-guess-spy";
+                                break;
+                        }
+                    }
+
+                    <div class="log @logType"><span class="log-name">@log.PlayerName</span> @message <span class="log-info @infoType">@log.Info</span></div>
                 }
             </div>
         </div>
     </div>
 
-    <div class="voting-modal @_modalDisplay">
-        <div class="voting-modal-content">
+    <div class="voting-modal @_modalDisplay" @onclick="ToggleModalContent">
+        <div class="voting-modal-content @_modalContentDisplay" @onclick:stopPropagation="true">
             <h2>@_playerThatCalledMeeting?.Name called the meeting.</h2>
             <div class="player-list-meeting">
                 @foreach (var player in _players!)
@@ -204,7 +219,7 @@
             // current player who isn't the guesser gets to give clue
             if (_currentTurnPlayer.Name == _currentUserName && _currentTurnPlayer.IsGuesser == false)
             {
-                <div class="clue-form-container">
+                <div class="clue-form-container action-container">
                     <EditForm Model="@_clue" OnValidSubmit="@ClueGiven">
                         <DataAnnotationsValidator />
                         <ValidationSummary />
@@ -223,7 +238,7 @@
             }
             if (_currentTurnPlayer.IsGuesser)
             {
-                <div class="clue-container">
+                <div class="clue-container action-container">
                     <span>@_clue.Hint</span> <span>@_clue.NumberOfWords</span>
                     @if (_players.FirstOrDefault(x => x.Name == _currentUserName!)!.IsGuesser)
                     {
@@ -234,7 +249,7 @@
         }
         else
         {
-            <div class="return-to-lobby-button-container">
+            <div class="return-to-lobby-button-container action-container">
                 <button class="return-to-lobby" @onclick="ReturnToLobby">Return to Lobby</button>
             </div>
         }
@@ -250,6 +265,7 @@
 
     //css classes
     private string _modalDisplay = "modal-not-display";
+    private string _modalContentDisplay = "modal-content-display";
     private string _votesDisplay = "votes-not-display";
     private string _backgroundColorClass = "";
 
@@ -290,7 +306,7 @@
             RegisterEvents();
             if(_players!.FirstOrDefault(x => x.Name == _currentUserName)!.IsHost)
             {
-                await SendClue(null);
+                await Task.Delay(300).ContinueWith(async _ => await SendClue(null));
             }
         }
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
@@ -310,6 +326,7 @@
         HubConnection!.On<Player>("PlayerVotedOut", PlayerVotedOut);
         HubConnection!.On("NoPlayerVotedOut", NoPlayerVotedOut);
         HubConnection!.On("ContinueGameAfterVoting", ContinueGameAfterVoting);
+        HubConnection!.On("NavigateToLobby", NavigateToLobby);
     }
 
     /// <summary>
@@ -337,6 +354,7 @@
     /// <returns></returns>
     private void NextTurnAfterClue()
     {
+        _words = wordsService.Words;
         InvokeAsync(StateHasChanged);
         UpdateGameState();
     }
@@ -471,7 +489,7 @@
 
         if(_currentUserName == _guesser!.Name)
         {
-            var delay = Task.Delay(3000).ContinueWith(_ =>
+            var delay = Task.Delay(5000).ContinueWith(_ =>
             {
                 HubConnection!.SendAsync("ContinueGameAfterVoting", _currentRoomCode);
             });
@@ -487,6 +505,14 @@
         _skipVoteDisabled = false;
         CloseModal();
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// from the hub
+    /// </summary>
+    private void NavigateToLobby()
+    {
+        navigationManager.NavigateTo("/lobby");
     }
 
     private void UpdateGameState()
@@ -514,18 +540,26 @@
 
     private async Task ClueGiven()
     {
-        //await InvokeAsync(StateHasChanged);
         await SendClue(_clue);
     }
 
     private async Task WordGuessed(Word word)
     {
-        await SendGuess(word);
+        if (_players!.FirstOrDefault(x => x.Name == _currentUserName!)!.IsGuesser)
+        {
+            await SendGuess(word);
+        }
     }
 
+    /// <summary>
+    /// return to lobby button clicked
+    /// </summary>
     private void ReturnToLobby()
     {
-        navigationManager.NavigateTo("/lobby");
+        if (_players!.FirstOrDefault(x => x.Name == _currentUserName!)!.IsHost)
+        {
+            HubConnection!.SendAsync("ReturnToLobby", _currentRoomCode);
+        }
     }
 
     private void CallMeeting()
@@ -572,5 +606,17 @@
     private async Task SkipTurn()
     {
         await HubConnection!.SendAsync("GuesserTurnDone", _currentRoomCode);
+    }
+
+    private void ToggleModalContent()
+    {
+        if (_modalContentDisplay == "modal-content-display")
+        {
+            _modalContentDisplay = "modal-content-not-display";
+        }
+        else
+        {
+            _modalContentDisplay = "modal-content-display";
+        }
     }
 }
