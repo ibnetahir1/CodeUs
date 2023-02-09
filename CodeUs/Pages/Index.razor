@@ -96,6 +96,7 @@
             if (roomsService.ContainsRoom(_playInfo.RoomCode) && _playInfo.Nickname != "SkipVote" && roomsService.GetRoom(_playInfo.RoomCode)!.Players.FirstOrDefault(x => x.Name == _playInfo.Nickname) == null)
             {
                 playInfoContainer.SetValue(_playInfo);
+                roomsService.JoinRoom(_playInfo.Nickname, _playInfo.RoomCode);
                 //roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
                 navigationManager.NavigateTo("/lobby");
             }
@@ -138,7 +139,9 @@
                 }
 
                 // add room to list of rooms
+                _playInfo.IsHost = true;
                 playInfoContainer.SetValue(_playInfo);
+                roomsService.HostRoom(_playInfo.Nickname, _playInfo.RoomCode);
                 //roomsService.AddPlayerToRoom(_playInfo.RoomCode, _playInfo.Nickname);
                 navigationManager.NavigateTo("/lobby");
             }

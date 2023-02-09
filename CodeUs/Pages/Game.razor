@@ -1,10 +1,12 @@
 ﻿@page "/game"
 @using CodeUs.Shared.Models;
 @using Microsoft.AspNetCore.SignalR.Client;
+@implements IDisposable
 @inject NavigationManager navigationManager
 @inject Shared.StateContainers.PlayInfoContainer playInfoContainer
 @inject Shared.StateContainers.IWordsService wordsService
 @inject Shared.StateContainers.IRoomsService roomsService
+@inject ILogger<Game> logger
 
 <div class="@_backgroundColorClass">
 
@@ -14,16 +16,26 @@
 
     <div class="player-and-words-container">
         <div class="player-list-game">
-            <ul class="no-bullets">
-                @foreach (var player in _players!)
+            <div class="player-list-guesser">Guesser</div>
+            <div class="player-list-guesser-name">@_guesser?.Name</div>
+            <div class="player-list-spymaster">Spymasters</div>
+            @foreach (var player in _players!)
+            {
+                if (!player.IsGuesser)
                 {
-                    <li>
-                        @player.Name: @player.IsGuesser
-                    </li>
-                }
-            </ul>
+                    string faction = "";
+                    if (_gameOver || player.Name == _currentUserName!)
+                    {
+                        faction = ": " + player.Faction.ToString();
+                    }
 
-            <button @onclick="CallMeeting" disabled="@_meetingDisabled">Call Meeting</button>
+                    <div class="player-list-spymaster-name"><b>@player.Name</b>@faction</div>
+                }
+            }
+
+            <div class="meeting-button-container">
+                <button class="meeting-button" @onclick="CallMeeting" disabled="@_meetingDisabled">Call Meeting</button>
+            </div>
         </div>
 
         @if (_currentTurnPlayer != null && _words != null)
@@ -288,9 +300,27 @@
     [Inject]
     private HubConnection? HubConnection { get; set; }
 
+    public void Dispose()
+    {
+        logger.LogInformation("disposing game page");
+        HubConnection!.Remove("NextTurnAfterClue");
+        HubConnection!.Remove("NextStepAfterGuess");
+        HubConnection!.Remove("NextTurnAfterGuesser");
+        HubConnection!.Remove("GameOverAgentsWin");
+        HubConnection!.Remove("GameOverSpyWins");
+        HubConnection!.Remove("TurnLimitReached");
+        HubConnection!.Remove("MeetingCalled");
+        HubConnection!.Remove("PlayerVoted");
+        HubConnection!.Remove("PlayerVotedOut");
+        HubConnection!.Remove("NoPlayerVotedOut");
+        HubConnection!.Remove("ContinueGameAfterVoting");
+        HubConnection!.Remove("NavigateToLobby");
+    }
+
     protected override void OnInitialized()
     {
         _currentUserName = playInfoContainer?.Value?.Nickname;
+        logger.LogInformation($"user: {_currentUserName} entered the game");
         _currentRoomCode = playInfoContainer?.Value?.RoomCode;
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
         _guesser = _players!.FirstOrDefault(x => x.IsGuesser == true);
@@ -309,8 +339,8 @@
                 await Task.Delay(300).ContinueWith(async _ => await SendClue(null));
             }
         }
-        _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
-        _clue = roomsService.GetRoom(_currentRoomCode!)!.Clue;
+        //_players = roomsService.GetRoom(_currentRoomCode!)?.Players;
+        //_clue = roomsService.GetRoom(_currentRoomCode!)!.Clue;
     }
 
     private void RegisterEvents()
@@ -335,6 +365,10 @@
     /// <returns></returns>
     private async Task SendClue(Clue? clue)
     {
+        //foreach(var player in _players!)
+        //{
+        //    //logger.LogInformation($"{player.Name} is {player.Faction.ToString()}. Guesser?: {player.IsGuesser}. Host?: {player.IsHost}");
+        //}
         await HubConnection!.SendAsync("ClueGiven", clue, _currentUserName, _currentRoomCode);
     }
 
@@ -345,6 +379,7 @@
     /// <returns></returns>
     private async Task SendGuess(Word word)
     {
+        //logger.LogInformation($"Sending guess: {word.Value}'s faction is {word.Faction.ToString()}");
         await HubConnection!.SendAsync("WordGuessed", word, _currentUserName, _currentRoomCode);
     }
 
@@ -355,6 +390,7 @@
     private void NextTurnAfterClue()
     {
         _words = wordsService.Words;
+        _clue = roomsService.GetRoom(_currentRoomCode!)!.Clue;
         InvokeAsync(StateHasChanged);
         UpdateGameState();
     }
@@ -368,6 +404,15 @@
     {
         wordsService.WordGuessed(word);
         _lastWordGuessed = word;
+
+        //logger.LogInformation($"NextStepAfterGuess: {word.Value}'s faction is {word.Faction.ToString()}");
+        logger.LogInformation($"This user: {_currentUserName!}. # of players: {_players!.Count}");
+        //logger.LogInformation($"# of rooms: {roomsService.Rooms.Count}");
+
+        //foreach (var player in _players!)
+        //{
+        //    logger.LogInformation($"This user: {_currentUserName!}. {player.Name} is {player.Faction.ToString()}. Guesser?: {player.IsGuesser}. Host?: {player.IsHost}");
+        //}
 
         bool allAgentsGuessed = wordsService.Words.Where(x => x.Faction == Faction.Agent).All(x => x.IsGuessed == true);
         bool allSpiesGuessed = wordsService.Words.Where(x => x.Faction == Faction.Spy).All(x => x.IsGuessed == true);
@@ -510,9 +555,27 @@
     /// <summary>
     /// from the hub
     /// </summary>
-    private void NavigateToLobby()
+    private async Task NavigateToLobby()
     {
-        navigationManager.NavigateTo("/lobby");
+        await HubConnection!.SendAsync("RemovePlayerFromGroup", _currentRoomCode);
+        await HubConnection!.StopAsync();
+
+        //await InvokeAsync(StateHasChanged);
+
+        PlayInfo playInfo = playInfoContainer.Value!;
+        if (playInfo.IsHost)
+        {
+            roomsService.HostRoom(playInfo.Nickname, playInfo.RoomCode);
+            navigationManager.NavigateTo("/lobby", false, true);
+        }
+        else
+        {
+            await Task.Delay(100).ContinueWith(_ =>
+            {
+                roomsService.JoinRoom(playInfo.Nickname, playInfo.RoomCode);
+                navigationManager.NavigateTo("/lobby", false, true);
+            });
+        }
     }
 
     private void UpdateGameState()
@@ -554,11 +617,11 @@
     /// <summary>
     /// return to lobby button clicked
     /// </summary>
-    private void ReturnToLobby()
+    private async Task ReturnToLobby()
     {
         if (_players!.FirstOrDefault(x => x.Name == _currentUserName!)!.IsHost)
         {
-            HubConnection!.SendAsync("ReturnToLobby", _currentRoomCode);
+            await HubConnection!.SendAsync("ReturnToLobby", _currentRoomCode);
         }
     }
 

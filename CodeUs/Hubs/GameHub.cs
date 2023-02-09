@@ -1,6 +1,7 @@
 ﻿using CodeUs.Shared.Models;
 using CodeUs.Shared.StateContainers;
 using Microsoft.AspNetCore.SignalR;
+using System.Numerics;
 
 
 namespace CodeUs.Hubs
@@ -20,9 +21,19 @@ namespace CodeUs.Hubs
 
         public async Task PlayerJoined(string playerName, string roomCode)
         {
-            Player? player = _roomsService.AddPlayerToRoom(playerName, Context.ConnectionId, roomCode);
-            await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
-            await Clients.Group(roomCode).SendAsync("Update", player);
+            Player player = _roomsService.GetPlayer(playerName, roomCode);
+            if (player.ConnectionId == "")
+            {
+                _roomsService.UpdateConnectionId(playerName, Context.ConnectionId, roomCode);
+                await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
+                await Clients.Group(roomCode).SendAsync("Update", player);
+            }
+            //Player? player = _roomsService.AddPlayerToRoom(playerName, Context.ConnectionId, roomCode);
+            //if (player != null)
+            //{
+            //    await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
+            //}
+            //await Clients.Group(roomCode).SendAsync("Update", player);
         }
 
         public async Task RemovePlayer(string playerName, string roomCode)
@@ -161,24 +172,47 @@ namespace CodeUs.Hubs
 
         public async Task ReturnToLobby(string roomCode)
         {
-            List<Player> players = _roomsService.GetPlayers(roomCode);
-            foreach (Player player in players)
-            {
-                player.IsGuesser = false;
-                player.IsTurn = false;
-                player.WasLastTurn = false;
-                player.IsReady = false;
-                player.HasMeeting = true;
-                player.HasVoted = false;
-            }
+            //Room newRoom = new();
+            //List<Player> newPlayers = new();
 
-            Room room = _roomsService.GetRoom(roomCode)!;
-            room.Clue = new();
-            room.Votes = new();
-            room.GameLogs = new();
-            room.TurnsLeft = 8;
+            //List<Player> players = _roomsService.GetPlayers(roomCode);
+            //foreach (Player player in players)
+            //{
+            //    Player newPlayer = new();
+            //    newPlayer.Name = player.Name;
+            //    //newPlayer.ConnectionId = "";
+            //    newPlayer.IsHost= player.IsHost;
+
+            //    newPlayers.Add(newPlayer);
+            //    //player.IsGuesser = false;
+            //    //player.IsTurn = false;
+            //    //player.WasLastTurn = false;
+            //    //player.IsReady = false;
+            //    //player.HasMeeting = true;
+            //    //player.HasVoted = false;
+            //    //player.Faction = Faction.Neutral;
+            //}
+
+            //Room room = _roomsService.GetRoom(roomCode)!;
+
+            //newRoom.RoomCode = room.RoomCode;
+            //newRoom.Players = newPlayers;
+            //newRoom.TurnsLeft = 8;
+
+            _roomsService.RemoveRoom(roomCode);
+            //_roomsService.AddRoom(newRoom);
+
+            //room.Clue = new();
+            //room.Votes = new();
+            //room.GameLogs = new();
+            //room.TurnsLeft = 8;
 
             await Clients.Group(roomCode).SendAsync("NavigateToLobby");
+        }
+
+        public async Task RemovePlayerFromGroup(string roomCode)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomCode!);
         }
 
         public override Task OnConnectedAsync()
@@ -194,8 +228,9 @@ namespace CodeUs.Hubs
             if (player != null && roomCode != null)
             {
                 await Clients.Group(roomCode).SendAsync("PlayerRemoved", player);
+                await Groups.RemoveFromGroupAsync(player!.ConnectionId, roomCode!);
             }
-
+            
             Console.WriteLine($"Disconnected {e?.Message} {Context.ConnectionId}");
             await base.OnDisconnectedAsync(e);
         }

@@ -92,19 +92,15 @@
 }
 
     .play-button:active,
-    .play-button:focus,
-    .ready-button:active,
-    .ready-button:focus {
+    .play-button:focus {
         outline: none;
     }
 
-    .play-button:hover,
-    .ready-button:hover {
+    .play-button:hover {
         background-position: -20px -20px;
     }
 
-    .play-button:focus:not(:active),
-    .ready-button:focus:not(:active) {
+    .play-button:focus:not(:active) {
         box-shadow: rgba(40, 170, 255, 0.25) 0 0 0 .125em;
     }
 

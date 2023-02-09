@@ -4,7 +4,14 @@ namespace CodeUs.Shared.StateContainers
 {
     public class RoomsService : IRoomsService
     {
+        ILogger<RoomsService> _logger;
+
         public List<Room> Rooms { get; set; } = new();
+
+        public RoomsService(ILogger<RoomsService> logger)
+        {
+            _logger = logger;
+        }
 
         public bool ContainsRoom(string roomCode)
         {
@@ -18,31 +25,84 @@ namespace CodeUs.Shared.StateContainers
             return false;
         }
 
-        public Player? AddPlayerToRoom(string playerName, string connectionId, string roomCode)
+        public Player HostRoom(string playerName, string roomCode)
         {
-            Room? room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode);
-
-            if(room != null && room.GetPlayer(playerName) != null)
-            {
-                return null;
-            }
+            _logger.LogInformation("hosting room");
 
             Player player = new();
             player.Name = playerName;
-            player.ConnectionId = connectionId;
 
-            if (room == null)
-            {
-                room = new();
-                room.RoomCode = roomCode;
-                player.IsHost = true;
-                Rooms.Add(room);
-            }
+            Room room = new();
+            room.RoomCode = roomCode;
+            player.IsHost = true;
+            room.AddPlayer(player);
+            Rooms.Add(room);
+
+            return player;
+        }
+
+        public Player JoinRoom(string playerName, string roomCode)
+        {
+            _logger.LogInformation("joining room");
+
+            Room room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!;
+
+            Player player = new();
+            player.Name = playerName;
 
             room.AddPlayer(player);
 
             return player;
         }
+
+        public void UpdateConnectionId(string playerName, string connectionId, string roomCode)
+        {
+            _logger.LogInformation("updating conId");
+
+            Player player = GetPlayer(playerName, roomCode);
+
+            player.ConnectionId = connectionId;
+        }
+
+        public void AddRoom(Room room)
+        {
+            Rooms.Add(room);
+        }
+
+        public void RemoveRoom(string roomCode)
+        {
+            Rooms.RemoveAll(x => x.RoomCode == roomCode);
+        }
+
+        //public Player? AddPlayerToRoom(string playerName, string connectionId, string roomCode)
+        //{
+        //    Room? room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode);
+
+        //    // room exists and player with this name exists
+        //    if(room != null && room.GetPlayer(playerName) != null)
+        //    {
+        //        _logger.LogInformation($"room with code: {roomCode} exists and player with name: {playerName} exists.");
+        //        return null;
+        //    }
+
+        //    _logger.LogInformation($"room code is: {room?.RoomCode}. adding player: {playerName}.");
+
+        //    Player player = new();
+        //    player.Name = playerName;
+        //    player.ConnectionId = connectionId;
+
+        //    if (room == null)
+        //    {
+        //        room = new();
+        //        room.RoomCode = roomCode;
+        //        player.IsHost = true;
+        //        Rooms.Add(room);
+        //    }
+
+        //    room.AddPlayer(player);
+
+        //    return player;
+        //}
 
         public Player RemovePlayerFromRoom(string playerName, string roomCode)
         {
@@ -72,6 +132,19 @@ namespace CodeUs.Shared.StateContainers
         public Player GetPlayer(string playerName, string roomCode)
         {
             return Rooms.FirstOrDefault(x => x.RoomCode == roomCode)!.GetPlayer(playerName)!;
+        }
+
+        public bool ShouldPlayerBeAdded(string playerName, string roomCode)
+        {
+            Room? room = Rooms.FirstOrDefault(x => x.RoomCode == roomCode);
+            if (room == null)
+            {
+                return true;
+            }
+            else
+            {
+                return !room.Players.Exists(x => x.Name == playerName);
+            }
         }
 
         public void RandomlyAssignRoles(string roomCode)

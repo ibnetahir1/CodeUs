@@ -105,6 +105,19 @@ ul.no-bullets {
     white-space: nowrap;
 }
 
+    .ready-button:active,
+    .ready-button:focus {
+        outline: none;
+    }
+
+    .ready-button:hover {
+        background-position: -20px -20px;
+    }
+
+    .ready-button:focus:not(:active) {
+        box-shadow: rgba(40, 170, 255, 0.25) 0 0 0 .125em;
+    }
+
 .game-settings {
     width: 25vw;
     box-shadow: rgb(0 0 0 / 35%) 0px 5px 15px;

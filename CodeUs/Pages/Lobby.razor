@@ -2,11 +2,12 @@
 @using CodeUs.Hubs;
 @using CodeUs.Shared.Models;
 @using Microsoft.AspNetCore.SignalR.Client;
+@implements IDisposable
 @inject NavigationManager navigationManager
 @inject Shared.StateContainers.PlayInfoContainer playInfoContainer
 @inject Shared.StateContainers.IRoomsService roomsService
 @inject Shared.StateContainers.IWordsService wordsService
-@inject ILogger<Lobby> logger
+@inject ILogger<Lobby> _logger
 
 <h1>current user: @_currentUserName</h1>
 <h1>room code: @_currentRoomCode</h1>
@@ -116,9 +117,18 @@
     [Inject]
     private HubConnection? HubConnection { get; set; }
 
+    public void Dispose()
+    {
+        HubConnection!.Remove("Update");
+
+        HubConnection!.Remove("GameStart");
+
+        HubConnection!.Remove("PlayerRemoved");
+    }
+
     protected override void OnInitialized()
     {
-        logger.LogInformation("Reached the lobby");
+        _logger.LogInformation("Reached the lobby");
         _currentUserName = playInfoContainer?.Value?.Nickname;
         _currentRoomCode = playInfoContainer?.Value?.RoomCode;
         _players = roomsService.GetRoom(_currentRoomCode!)?.Players;
@@ -128,6 +138,7 @@
     {
         if (firstRender)
         {
+            //await Task.Delay(300).ContinueWith(async _ => await EnterRoom());
             await EnterRoom();
         }
     }
@@ -148,10 +159,18 @@
 
             if(HubConnection!.State == HubConnectionState.Disconnected)
             {
+                //_logger.LogInformation($"this user: {_currentUserName}. starting connection to hub.");
                 await HubConnection!.StartAsync();
+                await HubConnection.SendAsync("PlayerJoined", _currentUserName, _currentRoomCode);
+                //roomsService.UpdateConnectionId(_currentUserName!, HubConnection.ConnectionId!, _currentRoomCode!);
             }
 
-            await HubConnection.SendAsync("PlayerJoined", _currentUserName, _currentRoomCode);
+            //if(roomsService.ShouldPlayerBeAdded(_currentUserName!, _currentRoomCode!))
+            //{
+            //    await HubConnection.SendAsync("PlayerJoined", _currentUserName, _currentRoomCode);
+            //}
+
+            //await HubConnection.SendAsync("PlayerJoined", _currentUserName, _currentRoomCode);
         }
         catch(Exception e)
         {
@@ -187,7 +206,7 @@
         bool allPlayersReady = _players!.All(x => x.IsReady);
 
         if (currentPlayer != null && currentPlayer.IsHost && _players!.Count > 2 && allPlayersReady)
-    {
+        {
             _isStartDisabled = false;
         }
         else
@@ -219,7 +238,7 @@
     /// <returns></returns>
     private async Task ToggleReady()
     {
-        logger?.LogInformation($"Toggling ready for {_currentUserName}");
+        //_logger?.LogInformation($"Toggling ready for {_currentUserName}");
         await HubConnection!.SendAsync("ToggleReady", _currentUserName, _currentRoomCode);
     }
 
@@ -235,7 +254,7 @@
         }
         else
         {
-            logger?.LogInformation("Sending GameStart request to the hub");
+            //_logger?.LogInformation("Sending GameStart request to the hub");
             await HubConnection!.SendAsync("GameStart", _gameSettings, _currentRoomCode, null);
         }
     }
@@ -247,8 +266,8 @@
     /// <returns></returns>
     private void GameStart(List<Word> wordList)
     {
-        logger?.LogInformation("Hub is trying to redirect to the game");
+        //_logger?.LogInformation("Hub is trying to redirect to the game");
         wordsService.Words = wordList;
-        navigationManager.NavigateTo("/game");
+        navigationManager.NavigateTo("/game", false, true);
     }
 }

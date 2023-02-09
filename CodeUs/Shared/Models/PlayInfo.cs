@@ -8,5 +8,7 @@ namespace CodeUs.Shared.Models
 
         public string RoomCode { get; set; } = "";
 
+        public bool IsHost { get; set; } = false;
+
     }
 }
